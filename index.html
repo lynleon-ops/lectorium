@@ -570,7 +570,7 @@
     <div class="gh-header-left">
         <div class="gh-logo">🎙️</div>
         <div class="gh-title">Lectorium <span>/ español</span></div>
-        <span class="gh-badge">v3.2</span>
+        <span class="gh-badge">v3.3</span>
     </div>
     <nav class="gh-htabs">
         <button class="gh-htab active" data-view="editor" onclick="switchView('editor')">
@@ -741,7 +741,7 @@ Prueba escribiendo algo y presiona "Leer" para escucharlo en español.</textarea
 <footer class="gh-footer">
     <span class="gh-foot-name">🎙️ Lectorium</span>
     <span id="footerCopyright"></span>
-    <span class="gh-foot-ver">v3.2</span>
+    <span class="gh-foot-ver">v3.3</span>
 </footer>
 
 <!-- ===== SAVE TEXT MODAL ===== -->
@@ -1380,10 +1380,11 @@ function exportAudio() {
     if (!text) { showToast('Escribe algo primero', 'warning'); return; }
     $('audioFilename').value = currentFilename.replace(/\.txt$/, '') + '.webm';
     const info = $('audioModalInfo');
+    const pasos = 'Al pulsar, Chrome te pedirá compartir: elige la pestaña <b>"Voces Google en español"</b> (ya viene marcada), deja encendido <b>"Compartir también el audio"</b> y pulsa <b>Compartir</b>. Es la única forma de capturar las voces de Google.';
     if (audioDirHandle) {
-        info.innerHTML = `Se grabará el audio mientras se lee. El navegador te pedirá compartir una pestaña o pantalla: marca <b>"Compartir audio"</b>. El archivo se guardará en tu carpeta <b>${escapeHtml(audioDirHandle.name)}</b>.`;
+        info.innerHTML = pasos + `<br><br>El archivo se guardará en tu carpeta <b>${escapeHtml(audioDirHandle.name)}</b>.`;
     } else {
-        info.innerHTML = 'Se grabará el audio mientras se lee. El navegador te pedirá compartir una pestaña o pantalla: marca <b>"Compartir audio"</b>. Se descargará como WebM (elige una carpeta de audios para guardarlo ahí automáticamente).';
+        info.innerHTML = pasos + '<br><br>Se descargará como WebM (elige una carpeta de audios en el panel derecho para guardarlo ahí automáticamente).';
     }
     openModal('audioModal');
     $('audioFilename').focus();
@@ -1400,7 +1401,12 @@ async function confirmExportAudio() {
     try {
         let stream;
         try {
-            const display = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+            const display = await navigator.mediaDevices.getDisplayMedia({
+                video: true,
+                audio: true,
+                preferCurrentTab: true,
+                selfBrowserSurface: 'include'
+            });
             const audioTrack = display.getAudioTracks()[0];
             display.getVideoTracks().forEach(t => t.stop());
             if (!audioTrack) {
