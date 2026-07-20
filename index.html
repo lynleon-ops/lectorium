@@ -168,6 +168,8 @@
             transition: background 0.15s, color 0.15s;
         }
         .gh-ribbon-btn:hover { background: var(--bg-secondary); color: var(--text); }
+        .gh-ribbon-btn.active { background: var(--accent-light); color: var(--accent); }
+        .gh-ribbon-btn.active .rlabel { color: var(--accent); }
         .gh-ribbon-btn .ic { font-size: 20px; line-height: 1; }
         .gh-ribbon-btn .rlabel { font-size: 11px; }
         /* Carpeta sin elegir = ámbar (aviso); elegida = verde */
@@ -657,11 +659,20 @@
 
 <!-- ===== RIBBON ===== -->
 <div class="gh-ribbon" id="ribbon">
+    <button class="gh-ribbon-btn" id="ribbonInicio" onclick="switchView('editor')" title="Ir al editor">
+        <span class="ic">🏠</span>
+        <span class="rlabel">Inicio</span>
+    </button>
+    <div class="gh-ribbon-sep"></div>
     <button class="gh-ribbon-btn folder" id="ribbonAudioFolder" onclick="pickAudioFolder()" title="Elegir carpeta donde se guardan los audios MP3">
         <span class="ic">🎵</span>
         <span class="rlabel">Carpeta audio</span>
     </button>
     <div class="gh-ribbon-sep"></div>
+    <button class="gh-ribbon-btn" onclick="speakSelection()" title="Leer solo el texto seleccionado">
+        <span class="ic">🔊</span>
+        <span class="rlabel">Leer selección</span>
+    </button>
     <button class="gh-ribbon-btn" onclick="exportAudio()" title="Exportar el texto como audio MP3">
         <span class="ic">🎙️</span>
         <span class="rlabel">Exportar MP3</span>
@@ -669,10 +680,6 @@
     <button class="gh-ribbon-btn" id="ribbonAudios" onclick="switchView('audio')" title="Ver mis audios">
         <span class="ic">📁</span>
         <span class="rlabel">Mis audios <span id="audioCount" style="font-weight:700">0</span></span>
-    </button>
-    <button class="gh-ribbon-btn" id="ribbonEditor" onclick="switchView('editor')" title="Volver al editor" style="display:none">
-        <span class="ic">📝</span>
-        <span class="rlabel">Editor</span>
     </button>
 </div>
 
@@ -777,15 +784,6 @@ Prueba escribiendo algo y presiona el botón ▶ para escucharlo.</textarea>
             <div class="gh-panel-body">
                 <button class="gh-btn" style="width:100%" onclick="pickAudioFolder()">🎵 Elegir carpeta de audios</button>
                 <div id="audioFolderHint" style="font-size:11px;color:var(--text-muted);margin-top:4px">Ninguna seleccionada</div>
-            </div>
-        </div>
-
-        <!-- Actions -->
-        <div class="gh-panel">
-            <div class="gh-panel-header">⚡ Acciones</div>
-            <div class="gh-panel-body">
-                <button class="gh-btn" style="width:100%;margin-bottom:8px" onclick="speakSelection()">🔊 Leer selección</button>
-                <button class="gh-btn" style="width:100%" onclick="insertSample()">📋 Insertar texto de ejemplo</button>
             </div>
         </div>
     </aside>
@@ -995,6 +993,7 @@ async function init() {
     renderAudioList();
     updateCounts();
     restoreFolders();
+    switchView('editor');
 
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
@@ -1104,9 +1103,29 @@ function speakSelection() {
     showToast('Leyendo selección...', 'success');
 }
 
+// Quita símbolos markdown para que el lector no los pronuncie
+// (asteriscos de **negrita**/*cursiva*, #, guiones de lista, `código`, enlaces, etc.)
+function cleanForSpeech(text) {
+    return text
+        .replace(/```[\s\S]*?```/g, ' ')          // bloques de código
+        .replace(/`([^`]+)`/g, '$1')               // `código` en línea
+        .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')     // imágenes ![alt](url)
+        .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')   // enlaces [texto](url) -> texto
+        .replace(/(\*\*\*|\*\*|\*|___|__|_|~~)/g, '') // *, **, ***, _, __, ___, ~~
+        .replace(/^\s{0,3}#{1,6}\s*/gm, '')        // encabezados ### al inicio de línea
+        .replace(/^\s*>+\s?/gm, '')                // citas >
+        .replace(/^\s*[-*+]\s+/gm, '')             // viñetas de lista - * +
+        .replace(/^\s*\d+\.\s+/gm, '')             // listas numeradas 1.
+        .replace(/^\s*([-*_]\s*){3,}$/gm, ' ')     // líneas separadoras --- ***
+        .replace(/\|/g, ' ')                       // barras de tablas
+        .replace(/[*_#~`>]/g, '')                  // cualquier símbolo markdown suelto restante
+        .replace(/[ \t]{2,}/g, ' ')                // espacios múltiples
+        .trim();
+}
+
 function startSpeech(text) {
     speechSynthesis.cancel();
-    speechQueue = splitIntoChunks(text);
+    speechQueue = splitIntoChunks(cleanForSpeech(text));
     queueIndex = 0;
     isSpeaking = true;
     isPaused = false;
@@ -1619,10 +1638,9 @@ function updateCounts() {
 function switchView(view) {
     $('view-editor').style.display = view === 'editor' ? 'block' : 'none';
     $('view-audio').style.display = view === 'audio' ? 'block' : 'none';
-    // Alternar los botones del ribbon: en Audios se muestra "Editor" para volver
-    const rEd = $('ribbonEditor'), rAu = $('ribbonAudios');
-    if (rEd) rEd.style.display = view === 'audio' ? 'flex' : 'none';
-    if (rAu) rAu.style.display = view === 'audio' ? 'none' : 'flex';
+    // Resaltar el botón activo del ribbon (Inicio vs Mis audios)
+    $('ribbonInicio')?.classList.toggle('active', view === 'editor');
+    $('ribbonAudios')?.classList.toggle('active', view === 'audio');
     if (view === 'audio') renderAudioList();
 }
 
@@ -1653,13 +1671,6 @@ function clearText() {
     updateTabName('sin_titulo.txt');
     updateCharCount();
     showToast('Editor limpiado', 'success');
-}
-
-function insertSample() {
-    const sample = `El Quijote de la Mancha\n\nEn un lugar de la Mancha, de cuyo nombre no quiero acordarme, no ha mucho tiempo que vivía un hidalgo de los de lanza en astillero, adarga antigua, rocín flaco y galgo corredor.\n\nUna olla de algo más vaca que carnero, salpicón las más noches, duelos y quebrantos los sábados, lentejas los viernes, algún palomino de añadidura los domingos, consumían las tres partes de su hacienda.`;
-    editor.value = sample;
-    updateCharCount();
-    showToast('Texto de ejemplo insertado', 'success');
 }
 
 // ============ MODALES ============
