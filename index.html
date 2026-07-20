@@ -88,68 +88,58 @@
 
         /* ===== MAIN LAYOUT ===== */
         .gh-layout {
-            max-width: 1280px;
+            max-width: 1100px;
             margin: 0 auto;
             padding: 24px 32px;
             display: grid;
-            grid-template-columns: 260px 1fr 320px;
+            grid-template-columns: minmax(0, 1fr) 300px;
             gap: 24px;
+            align-items: start;
         }
 
-        /* ===== SIDEBAR LEFT ===== */
-        .gh-sidebar {
-            position: sticky;
-            top: 80px;
-            height: fit-content;
-        }
-        .gh-nav {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            overflow: hidden;
-        }
-        .gh-nav-header {
-            padding: 12px 16px;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border-bottom: 1px solid var(--border-light);
-            background: var(--bg-secondary);
-        }
-        .gh-nav-item {
+        /* ===== HEADER TABS ===== */
+        .gh-htabs {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 10px 16px;
-            color: var(--text);
-            text-decoration: none;
-            font-size: 14px;
-            cursor: pointer;
+            gap: 4px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            padding: 4px;
+        }
+        .gh-htab {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
             border: none;
             background: none;
-            width: 100%;
-            text-align: left;
-            transition: background 0.15s;
+            border-radius: 100px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.15s;
+            white-space: nowrap;
         }
-        .gh-nav-item:hover { background: var(--bg-secondary); }
-        .gh-nav-item.active {
-            background: var(--accent-light);
+        .gh-htab:hover { color: var(--text); }
+        .gh-htab.active {
+            background: var(--bg);
             color: var(--accent);
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
             font-weight: 600;
-            border-left: 3px solid var(--accent);
         }
-        .gh-nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
-        .gh-nav-item .count {
-            margin-left: auto;
+        .gh-htab .count {
             background: var(--bg-tertiary);
             color: var(--text-secondary);
-            font-size: 12px;
-            padding: 1px 7px;
+            font-size: 11px;
+            padding: 1px 6px;
             border-radius: 100px;
             font-weight: 600;
         }
+        .gh-htab.active .count { background: var(--accent-light); color: var(--accent); }
 
         /* ===== CENTER PANEL ===== */
         .gh-main {
@@ -292,6 +282,10 @@
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
         /* ===== RIGHT SIDEBAR ===== */
+        .gh-side {
+            position: sticky;
+            top: 84px;
+        }
         .gh-panel {
             background: var(--bg);
             border: 1px solid var(--border);
@@ -433,20 +427,20 @@
         .gh-toast.error { border-left: 3px solid var(--danger); }
         .gh-toast.warning { border-left: 3px solid var(--warning); }
 
-        /* Audio visualizer */
+        /* Audio visualizer (mini, integrado en la barra de estado) */
         .gh-visualizer {
-            display: flex;
+            display: inline-flex;
             align-items: flex-end;
-            justify-content: center;
-            gap: 3px;
-            height: 32px;
-            margin: 12px 0;
+            gap: 2px;
+            height: 14px;
+            margin-left: 10px;
             opacity: 0;
             transition: opacity 0.3s;
+            vertical-align: middle;
         }
         .gh-visualizer.active { opacity: 1; }
         .gh-vbar {
-            width: 4px;
+            width: 3px;
             background: var(--accent);
             border-radius: 2px;
             animation: vbar-anim 1s ease-in-out infinite;
@@ -515,18 +509,20 @@
         }
 
         /* Responsive */
-        @media (max-width: 1100px) {
-            .gh-layout { grid-template-columns: 200px 1fr 280px; }
+        @media (max-width: 1000px) {
+            .gh-layout { grid-template-columns: minmax(0, 1fr) 260px; }
         }
-        @media (max-width: 900px) {
+        @media (max-width: 860px) {
             .gh-layout { grid-template-columns: 1fr; }
-            .gh-sidebar { position: static; }
+            .gh-side { position: static; }
+            .gh-header { flex-wrap: wrap; gap: 10px; }
         }
         @media (max-width: 600px) {
             .gh-header { padding: 12px 16px; }
             .gh-layout { padding: 16px; }
             .gh-toolbar { gap: 6px; }
             .gh-btn { padding: 5px 10px; font-size: 12px; }
+            .gh-htab { padding: 5px 10px; font-size: 12px; }
         }
     </style>
 </head>
@@ -540,28 +536,21 @@
         <span class="gh-badge">v3.0</span>
         <span class="gh-badge" id="engineBadge" title="Motor de voz activo">💻 Voz del sistema</span>
     </div>
+    <nav class="gh-htabs">
+        <button class="gh-htab active" data-view="editor" onclick="switchView('editor')">
+            📝 Editor
+        </button>
+        <button class="gh-htab" data-view="files" onclick="switchView('files')">
+            📁 Mis Textos <span class="count" id="fileCount">0</span>
+        </button>
+        <button class="gh-htab" data-view="audio" onclick="switchView('audio')">
+            🎵 Audios <span class="count" id="audioCount">0</span>
+        </button>
+    </nav>
 </header>
 
 <!-- ===== LAYOUT ===== -->
 <div class="gh-layout">
-
-    <!-- LEFT SIDEBAR -->
-    <aside class="gh-sidebar">
-        <nav class="gh-nav">
-            <div class="gh-nav-header">Navegación</div>
-            <button class="gh-nav-item active" data-view="editor" onclick="switchView('editor')">
-                <span class="icon">📝</span> Editor
-            </button>
-            <button class="gh-nav-item" data-view="files" onclick="switchView('files')">
-                <span class="icon">📁</span> Mis Textos
-                <span class="count" id="fileCount">0</span>
-            </button>
-            <button class="gh-nav-item" data-view="audio" onclick="switchView('audio')">
-                <span class="icon">🎵</span> Audios
-                <span class="count" id="audioCount">0</span>
-            </button>
-        </nav>
-    </aside>
 
     <!-- CENTER -->
     <main class="gh-main" id="mainPanel">
@@ -579,12 +568,8 @@
                 </button>
                 <div class="gh-divider"></div>
                 <button class="gh-btn" onclick="saveText()">
-                    💾 Guardar Texto
+                    💾 Guardar
                 </button>
-                <button class="gh-btn gh-btn-accent" onclick="exportAudio()">
-                    🎵 Exportar Audio
-                </button>
-                <div class="gh-divider"></div>
                 <button class="gh-btn" onclick="clearText()">
                     🗑️ Limpiar
                 </button>
@@ -612,7 +597,11 @@ Este editor te permite:
 Prueba escribiendo algo y presiona "Leer" para escucharlo en español.</textarea>
                 </div>
                 <div class="gh-statusbar">
-                    <span><span class="dot" id="statusDot"></span><span id="statusMsg">Listo</span></span>
+                    <span><span class="dot" id="statusDot"></span><span id="statusMsg">Listo</span><span class="gh-visualizer" id="visualizer">
+                        <span class="gh-vbar"></span><span class="gh-vbar"></span><span class="gh-vbar"></span>
+                        <span class="gh-vbar"></span><span class="gh-vbar"></span><span class="gh-vbar"></span>
+                        <span class="gh-vbar"></span><span class="gh-vbar"></span><span class="gh-vbar"></span>
+                    </span></span>
                     <span id="charInfo">0 caracteres | 0 palabras</span>
                 </div>
             </div>
@@ -643,11 +632,11 @@ Prueba escribiendo algo y presiona "Leer" para escucharlo en español.</textarea
     </main>
 
     <!-- RIGHT SIDEBAR -->
-    <aside class="gh-sidebar">
+    <aside class="gh-side">
         <!-- Voice Settings -->
         <div class="gh-panel">
             <div class="gh-panel-header">
-                🎛️ Configuración de Voz
+                🎛️ Voz y ajustes
                 <button class="gh-btn" style="padding:2px 8px;font-size:12px" onclick="checkPiper(true)" title="Buscar servidor Piper">🔄 Piper</button>
             </div>
             <div class="gh-panel-body">
@@ -679,26 +668,14 @@ Prueba escribiendo algo y presiona "Leer" para escucharlo en español.</textarea
             </div>
         </div>
 
-        <!-- Visualizer -->
+        <!-- Actions -->
         <div class="gh-panel">
-            <div class="gh-panel-header">📊 Visualizador</div>
-            <div class="gh-panel-body" style="text-align:center">
-                <div class="gh-visualizer" id="visualizer">
-                    <div class="gh-vbar"></div><div class="gh-vbar"></div><div class="gh-vbar"></div>
-                    <div class="gh-vbar"></div><div class="gh-vbar"></div><div class="gh-vbar"></div>
-                    <div class="gh-vbar"></div><div class="gh-vbar"></div><div class="gh-vbar"></div>
-                </div>
-                <div style="font-size:12px;color:var(--text-muted);margin-top:4px" id="vizLabel">Silencio</div>
-            </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="gh-panel">
-            <div class="gh-panel-header">⚡ Acciones Rápidas</div>
+            <div class="gh-panel-header">⚡ Acciones</div>
             <div class="gh-panel-body">
-                <button class="gh-btn" style="width:100%;margin-bottom:8px" onclick="insertSample()">📋 Insertar texto de ejemplo</button>
+                <button class="gh-btn gh-btn-accent" style="width:100%;margin-bottom:8px" onclick="exportAudio()">🎵 Exportar Audio</button>
                 <button class="gh-btn" style="width:100%;margin-bottom:8px" onclick="speakSelection()">🔊 Leer selección</button>
-                <button class="gh-btn" style="width:100%" onclick="downloadCurrentText()">📥 Descargar texto actual</button>
+                <button class="gh-btn" style="width:100%;margin-bottom:8px" onclick="downloadCurrentText()">📥 Descargar texto actual</button>
+                <button class="gh-btn" style="width:100%" onclick="insertSample()">📋 Insertar texto de ejemplo</button>
             </div>
         </div>
     </aside>
@@ -955,7 +932,6 @@ const statusDot = $('statusDot');
 const statusMsg = $('statusMsg');
 const charInfo = $('charInfo');
 const visualizer = $('visualizer');
-const vizLabel = $('vizLabel');
 const btnSpeak = $('btnSpeak');
 const btnPause = $('btnPause');
 const audioPlayer = $('audioPlayer');
@@ -1076,9 +1052,6 @@ function updateCharCount() {
 function setStatus(msg, type) {
     statusMsg.textContent = msg;
     statusDot.className = 'dot' + (type ? ' ' + type : '');
-    vizLabel.textContent = type === 'speaking' ? 'Reproduciendo...'
-        : type === 'recording' ? 'Grabando...'
-        : type === 'paused' ? 'En pausa' : 'Silencio';
     visualizer.classList.toggle('active', type === 'speaking' || type === 'recording');
 }
 
@@ -1663,7 +1636,7 @@ function updateCounts() {
 
 // ============ VIEW SWITCHING ============
 function switchView(view) {
-    document.querySelectorAll('.gh-nav-item').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.gh-htab').forEach(el => el.classList.remove('active'));
     document.querySelector(`[data-view="${view}"]`).classList.add('active');
 
     $('view-editor').style.display = view === 'editor' ? 'block' : 'none';
