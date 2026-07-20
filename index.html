@@ -288,6 +288,7 @@
         }
         .gh-statusbar .dot.speaking { background: var(--accent); animation: blink 1s infinite; }
         .gh-statusbar .dot.recording { background: var(--danger); animation: blink 0.5s infinite; }
+        .gh-statusbar .dot.paused { background: var(--warning); }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
         /* ===== RIGHT SIDEBAR ===== */
@@ -536,7 +537,8 @@
     <div class="gh-header-left">
         <div class="gh-logo">🎙️</div>
         <div class="gh-title">TTS Reader <span>/ español</span></div>
-        <span class="gh-badge">v2.0</span>
+        <span class="gh-badge">v3.0</span>
+        <span class="gh-badge" id="engineBadge" title="Motor de voz activo">💻 Voz del sistema</span>
     </div>
 </header>
 
@@ -555,7 +557,7 @@
                 <span class="count" id="fileCount">0</span>
             </button>
             <button class="gh-nav-item" data-view="audio" onclick="switchView('audio')">
-                <span class="icon">🎵</span> Audios MP3
+                <span class="icon">🎵</span> Audios
                 <span class="count" id="audioCount">0</span>
             </button>
         </nav>
@@ -579,8 +581,8 @@
                 <button class="gh-btn" onclick="saveText()">
                     💾 Guardar Texto
                 </button>
-                <button class="gh-btn gh-btn-accent" onclick="exportMP3()">
-                    🎵 Exportar MP3
+                <button class="gh-btn gh-btn-accent" onclick="exportAudio()">
+                    🎵 Exportar Audio
                 </button>
                 <div class="gh-divider"></div>
                 <button class="gh-btn" onclick="clearText()">
@@ -630,10 +632,11 @@ Prueba escribiendo algo y presiona "Leer" para escucharlo en español.</textarea
         <!-- AUDIO VIEW -->
         <div id="view-audio" style="display:none">
             <div class="gh-toolbar">
-                <button class="gh-btn gh-btn-primary" onclick="exportMP3()">➕ Nuevo Audio</button>
+                <button class="gh-btn gh-btn-primary" onclick="exportAudio()">➕ Nuevo Audio</button>
                 <button class="gh-btn gh-btn-danger" onclick="clearAllAudio()">🗑️ Borrar Todo</button>
             </div>
             <div class="gh-panel-body">
+                <audio id="audioPlayer" controls style="width:100%;margin-bottom:12px;display:none"></audio>
                 <div class="gh-file-list" id="audioList"></div>
             </div>
         </div>
@@ -643,7 +646,10 @@ Prueba escribiendo algo y presiona "Leer" para escucharlo en español.</textarea
     <aside class="gh-sidebar">
         <!-- Voice Settings -->
         <div class="gh-panel">
-            <div class="gh-panel-header">🎛️ Configuración de Voz</div>
+            <div class="gh-panel-header">
+                🎛️ Configuración de Voz
+                <button class="gh-btn" style="padding:2px 8px;font-size:12px" onclick="checkPiper(true)" title="Buscar servidor Piper">🔄 Piper</button>
+            </div>
             <div class="gh-panel-body">
                 <div class="gh-control">
                     <label>Voz</label>
@@ -714,20 +720,20 @@ Prueba escribiendo algo y presiona "Leer" para escucharlo en español.</textarea
     </div>
 </div>
 
-<!-- ===== EXPORT MP3 MODAL ===== -->
-<div class="gh-modal-overlay" id="mp3Modal">
+<!-- ===== EXPORT AUDIO MODAL ===== -->
+<div class="gh-modal-overlay" id="audioModal">
     <div class="gh-modal">
-        <div class="gh-modal-header">🎵 Exportar como MP3</div>
+        <div class="gh-modal-header">🎵 Exportar Audio (WebM)</div>
         <div class="gh-modal-body">
-            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">
-                Se grabará el audio del sistema mientras se lee el texto. Asegúrate de tener el volumen activado.
+            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px" id="audioModalInfo">
+                Se grabará el audio mientras se lee el texto.
             </p>
-            <label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:6px">Nombre del archivo MP3</label>
-            <input type="text" id="mp3Filename" placeholder="audio_espanol.mp3" value="">
+            <label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:6px">Nombre del archivo</label>
+            <input type="text" id="audioFilename" placeholder="audio_espanol.webm" value="">
         </div>
         <div class="gh-modal-footer">
-            <button class="gh-btn" onclick="closeModal('mp3Modal')">Cancelar</button>
-            <button class="gh-btn gh-btn-accent" onclick="confirmExportMP3()">▶️ Grabar y Exportar</button>
+            <button class="gh-btn" onclick="closeModal('audioModal')">Cancelar</button>
+            <button class="gh-btn gh-btn-accent" onclick="confirmExportAudio()">▶️ Grabar y Exportar</button>
         </div>
     </div>
 </div>
@@ -735,18 +741,205 @@ Prueba escribiendo algo y presiona "Leer" para escucharlo en español.</textarea
 <!-- ===== TOAST ===== -->
 <div class="gh-toast" id="toast"></div>
 
+<!-- Piper WASM (corre en el navegador; requiere que la página se sirva por http/https) -->
+<script type="module">
+try {
+    if (location.protocol !== 'file:') {
+        const tts = await import('https://cdn.jsdelivr.net/npm/@mintplex-labs/piper-tts-web/+esm');
+        window.__piperWeb = tts;
+        window.onPiperWebReady?.();
+    }
+} catch (e) {
+    console.warn('Piper web (WASM) no disponible:', e);
+}
+</script>
+
 <script>
 // ============ STATE ============
 let voices = [];
-let utterance = null;
 let isSpeaking = false;
 let isPaused = false;
 let isRecording = false;
 let mediaRecorder = null;
+let recordingStream = null;
 let audioChunks = [];
 let currentFilename = 'sin_titulo.txt';
-let savedTexts = JSON.parse(localStorage.getItem('tts_texts') || '[]');
-let savedAudios = JSON.parse(localStorage.getItem('tts_audios') || '[]');
+let savedTexts = loadJSON('tts_texts');
+let savedAudios = [];           // metadata en memoria; los blobs viven en IndexedDB
+let speechQueue = [];           // fragmentos pendientes (voces del sistema)
+let queueIndex = 0;
+let keepAliveTimer = null;      // workaround para el corte de Chrome en textos largos
+let currentAudioUrl = null;     // object URL del reproductor de la lista de audios
+
+function loadJSON(key) {
+    try { return JSON.parse(localStorage.getItem(key) || '[]'); }
+    catch { return []; }
+}
+
+// ============ PIPER (servidor local) ============
+const PIPER_URL = 'http://127.0.0.1:5005';
+let piperAvailable = false;
+let piperVoices = [];
+let ttsAudio = new Audio();     // reproductor del audio generado por Piper
+let piperPlaying = false;
+let piperUrl = null;            // object URL de la reproducción actual de Piper
+
+function isPiperSelected() {
+    return piperAvailable && voiceSelect.value.startsWith('piper:');
+}
+
+// ============ PIPER WEB (WASM en el navegador) ============
+// Se activa cuando la página se sirve por http/https (GitHub Pages, SiteGround...).
+// La primera vez que se usa una voz, descarga el modelo (~20-60 MB) y queda en caché.
+let piperWebReady = false;
+const PIPER_WEB_VOICES = [
+    { id: 'es_ES-davefx-medium',   label: 'Davefx (España, masculina)' },
+    { id: 'es_ES-sharvard-medium', label: 'Sharvard (España)' },
+    { id: 'es_MX-claude-high',     label: 'Claude (México, alta calidad)' },
+    { id: 'es_MX-ale-medium',      label: 'Ale (México)' },
+    { id: 'es_AR-daniela-high',    label: 'Daniela (Argentina, alta calidad)' }
+];
+
+window.onPiperWebReady = () => {
+    piperWebReady = true;
+    updateEngineBadge();
+    renderVoiceOptions();
+};
+
+function isPiperWebSelected() {
+    return piperWebReady && voiceSelect.value.startsWith('web:');
+}
+
+async function piperWebSynthesize(text) {
+    const voiceId = voiceSelect.value.slice('web:'.length);
+    let lastPct = -1;
+    const wav = await window.__piperWeb.predict({ text, voiceId }, (progress) => {
+        if (progress && progress.total) {
+            const pct = Math.round((progress.loaded / progress.total) * 100);
+            if (pct !== lastPct) {
+                lastPct = pct;
+                setStatus(`⬇️ Descargando voz (solo la primera vez)... ${pct}%`, 'recording');
+            }
+        }
+    });
+    return wav;   // Blob WAV
+}
+
+async function checkPiper(manual = false) {
+    try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 2000);
+        const res = await fetch(PIPER_URL + '/api/voices', { signal: ctrl.signal });
+        clearTimeout(timer);
+        const data = await res.json();
+        piperVoices = data.voices || [];
+        piperAvailable = piperVoices.length > 0;
+    } catch {
+        piperAvailable = false;
+        piperVoices = [];
+    }
+    updateEngineBadge();
+    renderVoiceOptions();
+    if (manual) {
+        showToast(piperAvailable
+            ? `Piper conectado (${piperVoices.length} ${piperVoices.length === 1 ? 'voz' : 'voces'})`
+            : 'Piper no responde. Inicia 2_iniciar_servidor.bat', piperAvailable ? 'success' : 'warning');
+    }
+}
+
+function updateEngineBadge() {
+    const badge = $('engineBadge');
+    if (piperAvailable) {
+        badge.textContent = '🎙️ Piper conectado';
+        badge.style.background = 'var(--success-bg)';
+        badge.style.color = 'var(--success)';
+        badge.style.borderColor = 'var(--success)';
+    } else if (piperWebReady) {
+        badge.textContent = '🌐 Piper web listo';
+        badge.style.background = 'var(--success-bg)';
+        badge.style.color = 'var(--success)';
+        badge.style.borderColor = 'var(--success)';
+    } else {
+        badge.textContent = '💻 Voz del sistema';
+        badge.style.background = '';
+        badge.style.color = '';
+        badge.style.borderColor = '';
+    }
+}
+
+async function piperSynthesize(text) {
+    const voiceName = voiceSelect.value.slice('piper:'.length);
+    const res = await fetch(PIPER_URL + '/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voice: voiceName, rate: parseFloat(rate.value) })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return await res.blob();   // WAV
+}
+
+// ============ INDEXEDDB (persistencia real de audios) ============
+const DB_NAME = 'tts_reader';
+const DB_STORE = 'audios';
+
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = () => {
+            req.result.createObjectStore(DB_STORE, { keyPath: 'id' });
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+async function dbPutAudio(item) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(DB_STORE, 'readwrite');
+        tx.objectStore(DB_STORE).put(item);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+    });
+}
+
+async function dbGetAllAudios() {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const req = db.transaction(DB_STORE, 'readonly').objectStore(DB_STORE).getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+async function dbGetAudio(id) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const req = db.transaction(DB_STORE, 'readonly').objectStore(DB_STORE).get(id);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error);
+    });
+}
+
+async function dbDeleteAudio(id) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(DB_STORE, 'readwrite');
+        tx.objectStore(DB_STORE).delete(id);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+    });
+}
+
+async function dbClearAudios() {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(DB_STORE, 'readwrite');
+        tx.objectStore(DB_STORE).clear();
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+    });
+}
 
 // ============ DOM ============
 const $ = id => document.getElementById(id);
@@ -765,15 +958,27 @@ const visualizer = $('visualizer');
 const vizLabel = $('vizLabel');
 const btnSpeak = $('btnSpeak');
 const btnPause = $('btnPause');
+const audioPlayer = $('audioPlayer');
 
 // ============ INIT ============
-function init() {
+async function init() {
     populateVoices();
-    if (speechSynthesis.onvoiceschanged !== undefined) {
+    if ('onvoiceschanged' in speechSynthesis) {
         speechSynthesis.onvoiceschanged = populateVoices;
     }
     updateCharCount();
     renderFileList();
+    checkPiper();   // detectar servidor Piper en segundo plano
+
+    try {
+        const items = await dbGetAllAudios();
+        savedAudios = items
+            .map(({ id, name, size, date }) => ({ id, name, size, date }))
+            .sort((a, b) => b.id - a.id);
+    } catch (e) {
+        console.error('IndexedDB no disponible:', e);
+        savedAudios = [];
+    }
     renderAudioList();
     updateCounts();
 }
@@ -781,22 +986,82 @@ function init() {
 // ============ VOICES ============
 function populateVoices() {
     voices = speechSynthesis.getVoices();
-    const spanish = voices.filter(v => v.lang.toLowerCase().startsWith('es'));
-    const list = spanish.length > 0 ? spanish : voices;
-
-    voiceSelect.innerHTML = '';
-    list.forEach((v, i) => {
-        const opt = document.createElement('option');
-        opt.value = voices.indexOf(v);
-        opt.textContent = `${v.name} (${v.lang})${v.default ? ' ★' : ''}`;
-        voiceSelect.appendChild(opt);
-    });
+    renderVoiceOptions();
 }
 
+function renderVoiceOptions() {
+    const previous = voiceSelect.value;
+    voiceSelect.innerHTML = '';
+
+    if (piperAvailable) {
+        const og = document.createElement('optgroup');
+        og.label = '🎙️ Piper — servidor local';
+        piperVoices.forEach(name => {
+            const opt = document.createElement('option');
+            opt.value = 'piper:' + name;
+            opt.textContent = name;
+            og.appendChild(opt);
+        });
+        voiceSelect.appendChild(og);
+    }
+
+    if (piperWebReady) {
+        const og = document.createElement('optgroup');
+        og.label = '🌐 Piper — en el navegador';
+        PIPER_WEB_VOICES.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = 'web:' + v.id;
+            opt.textContent = v.label;
+            og.appendChild(opt);
+        });
+        voiceSelect.appendChild(og);
+    }
+
+    const spanish = voices.filter(v => v.lang.toLowerCase().startsWith('es'));
+    const list = spanish.length > 0 ? spanish : voices;
+    if (list.length > 0) {
+        const og = document.createElement('optgroup');
+        og.label = '💻 Voces del sistema';
+        list.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = 'sys:' + voices.indexOf(v);
+            opt.textContent = `${v.name} (${v.lang})${v.default ? ' ★' : ''}`;
+            og.appendChild(opt);
+        });
+        voiceSelect.appendChild(og);
+    }
+
+    if (previous && [...voiceSelect.options].some(o => o.value === previous)) {
+        voiceSelect.value = previous;
+    }
+    onVoiceChange();
+}
+
+function getSelectedSystemVoice() {
+    if (!voiceSelect.value.startsWith('sys:')) return null;
+    const idx = parseInt(voiceSelect.value.slice(4));
+    return (!isNaN(idx) && voices[idx]) ? voices[idx] : null;
+}
+
+// Piper no soporta cambiar el tono: se desactiva ese control cuando está activo
+function onVoiceChange() {
+    const usingPiper = isPiperSelected() || isPiperWebSelected();
+    pitch.disabled = usingPiper;
+    pitch.parentElement.parentElement.style.opacity = usingPiper ? 0.45 : 1;
+    pitch.parentElement.parentElement.title = usingPiper ? 'El tono no aplica con voces Piper' : '';
+}
+voiceSelect.addEventListener('change', onVoiceChange);
+
 // ============ SLIDERS ============
-rate.addEventListener('input', () => rateVal.textContent = parseFloat(rate.value).toFixed(1) + 'x');
+rate.addEventListener('input', () => {
+    rateVal.textContent = parseFloat(rate.value).toFixed(1) + 'x';
+    if (piperPlaying && isPiperWebSelected()) ttsAudio.playbackRate = parseFloat(rate.value);
+});
 pitch.addEventListener('input', () => pitchVal.textContent = parseFloat(pitch.value).toFixed(1));
-volume.addEventListener('input', () => volVal.textContent = Math.round(volume.value * 100) + '%');
+volume.addEventListener('input', () => {
+    volVal.textContent = Math.round(volume.value * 100) + '%';
+    ttsAudio.volume = parseFloat(volume.value);
+});
 
 // ============ CHAR COUNT ============
 editor.addEventListener('input', updateCharCount);
@@ -811,75 +1076,243 @@ function updateCharCount() {
 function setStatus(msg, type) {
     statusMsg.textContent = msg;
     statusDot.className = 'dot' + (type ? ' ' + type : '');
-    vizLabel.textContent = type === 'speaking' ? 'Reproduciendo...' : type === 'recording' ? 'Grabando...' : 'Silencio';
+    vizLabel.textContent = type === 'speaking' ? 'Reproduciendo...'
+        : type === 'recording' ? 'Grabando...'
+        : type === 'paused' ? 'En pausa' : 'Silencio';
     visualizer.classList.toggle('active', type === 'speaking' || type === 'recording');
 }
 
-// ============ SPEAK ============
+// ============ SPEAK (punto de entrada) ============
 function speak() {
     const text = editor.value.trim();
     if (!text) { showToast('Escribe algo primero', 'warning'); return; }
+    startSpeech(text);
+}
 
+function speakSelection() {
+    const sel = editor.value.substring(editor.selectionStart, editor.selectionEnd);
+    if (!sel.trim()) { showToast('Selecciona texto primero', 'warning'); return; }
+    startSpeech(sel.trim());
+    showToast('Leyendo selección...', 'success');
+}
+
+function startSpeech(text) {
+    cancelPlayback();
+    isSpeaking = true;
+    isPaused = false;
+    btnSpeak.innerHTML = '🔁 Repetir';
+    btnPause.innerHTML = '⏸️ Pausar';
+    if (isPiperSelected()) {
+        piperSpeak(text);
+    } else if (isPiperWebSelected()) {
+        piperWebSpeak(text);
+    } else {
+        sysSpeak(text);
+    }
+}
+
+// Detiene cualquier reproducción en curso (ambos motores) sin tocar la UI
+function cancelPlayback() {
     speechSynthesis.cancel();
+    stopKeepAlive();
+    speechQueue = [];
+    queueIndex = 0;
+    ttsAudio.pause();
+    ttsAudio.onended = null;
+    ttsAudio.ontimeupdate = null;
+    ttsAudio.removeAttribute('src');
+    if (piperUrl) { URL.revokeObjectURL(piperUrl); piperUrl = null; }
+    piperPlaying = false;
+}
 
-    utterance = new SpeechSynthesisUtterance(text);
-    const idx = parseInt(voiceSelect.value);
-    if (!isNaN(idx) && voices[idx]) utterance.voice = voices[idx];
+// ---- Motor Piper ----
+async function piperSpeak(text) {
+    setStatus('⏳ Generando audio con Piper...', 'speaking');
+    try {
+        const blob = await piperSynthesize(text);
+        if (!isSpeaking) return;   // el usuario detuvo mientras se generaba
 
-    utterance.rate = parseFloat(rate.value);
-    utterance.pitch = parseFloat(pitch.value);
-    utterance.volume = parseFloat(volume.value);
-    utterance.lang = 'es-ES';
+        piperUrl = URL.createObjectURL(blob);
+        ttsAudio.src = piperUrl;
+        ttsAudio.volume = parseFloat(volume.value);
+        ttsAudio.onended = () => onSpeechFinished();
+        ttsAudio.ontimeupdate = () => {
+            if (ttsAudio.duration && isSpeaking && !isPaused) {
+                const pct = Math.round((ttsAudio.currentTime / ttsAudio.duration) * 100);
+                setStatus(`🔊 Leyendo (Piper)... ${pct}%`, 'speaking');
+            }
+        };
+        await ttsAudio.play();
+        piperPlaying = true;
+        setStatus('🔊 Leyendo (Piper)...', 'speaking');
+    } catch (e) {
+        console.error(e);
+        finishSpeechState();
+        setStatus('❌ Error');
+        showToast('No se pudo conectar con Piper. ¿Está corriendo el servidor?', 'error');
+        checkPiper();
+    }
+}
 
-    utterance.onstart = () => {
-        isSpeaking = true; isPaused = false;
-        btnSpeak.innerHTML = '🔁 Repetir';
-        btnPause.innerHTML = '⏸️ Pausar';
-        setStatus('🔊 Leyendo...', 'speaking');
+// ---- Motor Piper web (WASM) ----
+// La velocidad se aplica con playbackRate (el navegador conserva el tono).
+async function piperWebSpeak(text) {
+    setStatus('⏳ Generando audio (Piper web)...', 'speaking');
+    try {
+        const blob = await piperWebSynthesize(text);
+        if (!isSpeaking) return;   // el usuario detuvo mientras se generaba
+
+        piperUrl = URL.createObjectURL(blob);
+        ttsAudio.src = piperUrl;
+        ttsAudio.volume = parseFloat(volume.value);
+        ttsAudio.playbackRate = parseFloat(rate.value);
+        ttsAudio.onended = () => onSpeechFinished();
+        ttsAudio.ontimeupdate = () => {
+            if (ttsAudio.duration && isSpeaking && !isPaused) {
+                const pct = Math.round((ttsAudio.currentTime / ttsAudio.duration) * 100);
+                setStatus(`🔊 Leyendo (Piper web)... ${pct}%`, 'speaking');
+            }
+        };
+        await ttsAudio.play();
+        piperPlaying = true;
+        setStatus('🔊 Leyendo (Piper web)...', 'speaking');
+    } catch (e) {
+        console.error(e);
+        finishSpeechState();
+        setStatus('❌ Error');
+        showToast('No se pudo generar el audio con Piper web. Revisa tu conexión.', 'error');
+    }
+}
+
+// ---- Motor del sistema (speechSynthesis) ----
+// Chrome corta speechSynthesis tras ~15 s con voces remotas. Solución doble:
+// fragmentar por oraciones + resume() periódico.
+function sysSpeak(text) {
+    speechQueue = splitIntoChunks(text);
+    queueIndex = 0;
+    startKeepAlive();
+    speakNextChunk();
+}
+
+function splitIntoChunks(text, maxLen = 200) {
+    const sentences = text.match(/[^.!?…\n]+[.!?…]*\s*|\n+/g) || [text];
+    const chunks = [];
+    let current = '';
+    for (const s of sentences) {
+        if ((current + s).length > maxLen && current.trim()) {
+            chunks.push(current.trim());
+            current = s;
+        } else {
+            current += s;
+        }
+        while (current.length > maxLen) {
+            let cut = current.lastIndexOf(',', maxLen);
+            if (cut < maxLen * 0.4) cut = current.lastIndexOf(' ', maxLen);
+            if (cut <= 0) cut = maxLen;
+            chunks.push(current.slice(0, cut + 1).trim());
+            current = current.slice(cut + 1);
+        }
+    }
+    if (current.trim()) chunks.push(current.trim());
+    return chunks;
+}
+
+function makeUtterance(text) {
+    const u = new SpeechSynthesisUtterance(text);
+    const voice = getSelectedSystemVoice();
+    if (voice) {
+        u.voice = voice;
+        u.lang = voice.lang;
+    } else {
+        u.lang = 'es-ES';
+    }
+    u.rate = parseFloat(rate.value);
+    u.pitch = parseFloat(pitch.value);
+    u.volume = parseFloat(volume.value);
+    return u;
+}
+
+function startKeepAlive() {
+    stopKeepAlive();
+    keepAliveTimer = setInterval(() => {
+        if (speechSynthesis.speaking && !isPaused) speechSynthesis.resume();
+    }, 10000);
+}
+
+function stopKeepAlive() {
+    if (keepAliveTimer) { clearInterval(keepAliveTimer); keepAliveTimer = null; }
+}
+
+function speakNextChunk() {
+    if (queueIndex >= speechQueue.length) { onSpeechFinished(); return; }
+
+    const u = makeUtterance(speechQueue[queueIndex]);
+
+    u.onstart = () => {
+        const pct = Math.round((queueIndex / speechQueue.length) * 100);
+        setStatus(`🔊 Leyendo... ${pct}% (${queueIndex + 1}/${speechQueue.length})`, 'speaking');
     };
-    utterance.onend = () => {
-        isSpeaking = false; isPaused = false;
-        btnSpeak.innerHTML = '▶️ Leer';
-        btnPause.innerHTML = '⏸️ Pausar';
-        setStatus('✅ Finalizado');
-        if (isRecording) stopRecording();
+    u.onend = () => {
+        if (!isSpeaking) return;   // se llamó a stop()
+        queueIndex++;
+        speakNextChunk();
     };
-    utterance.onerror = (e) => {
-        if (e.error !== 'canceled') setStatus('❌ Error', '');
-        isSpeaking = false;
-    };
-    utterance.onpause = () => {
-        isPaused = true;
-        btnPause.innerHTML = '▶️ Reanudar';
-        setStatus('⏸️ Pausado', 'paused');
-    };
-    utterance.onresume = () => {
-        isPaused = false;
-        btnPause.innerHTML = '⏸️ Pausar';
-        setStatus('🔊 Leyendo...', 'speaking');
+    u.onerror = (e) => {
+        if (e.error === 'canceled' || e.error === 'interrupted') return;
+        console.error('Error de síntesis:', e.error);
+        setStatus('❌ Error de lectura');
+        finishSpeechState();
     };
 
-    speechSynthesis.speak(utterance);
+    speechSynthesis.speak(u);
+}
+
+// ---- Fin / pausa / detener (ambos motores) ----
+function onSpeechFinished() {
+    finishSpeechState();
+    setStatus('✅ Finalizado');
+    if (isRecording) stopRecording();
+}
+
+function finishSpeechState() {
+    isSpeaking = false;
+    isPaused = false;
+    speechQueue = [];
+    queueIndex = 0;
+    stopKeepAlive();
+    piperPlaying = false;
+    if (piperUrl) { URL.revokeObjectURL(piperUrl); piperUrl = null; }
+    btnSpeak.innerHTML = '▶️ Leer';
+    btnPause.innerHTML = '⏸️ Pausar';
 }
 
 function togglePause() {
     if (!isSpeaking) return;
-    speechSynthesis.paused ? speechSynthesis.resume() : speechSynthesis.pause();
+    if (isPaused) {
+        isPaused = false;
+        if (piperPlaying) ttsAudio.play(); else speechSynthesis.resume();
+        btnPause.innerHTML = '⏸️ Pausar';
+        setStatus('🔊 Leyendo...', 'speaking');
+    } else {
+        isPaused = true;
+        if (piperPlaying) ttsAudio.pause(); else speechSynthesis.pause();
+        btnPause.innerHTML = '▶️ Reanudar';
+        setStatus('⏸️ Pausado', 'paused');
+    }
 }
 
 function stop() {
-    speechSynthesis.cancel();
-    isSpeaking = false; isPaused = false;
-    btnSpeak.innerHTML = '▶️ Leer';
-    btnPause.innerHTML = '⏸️ Pausar';
+    finishSpeechState();
+    cancelPlayback();
     setStatus('⏹️ Detenido');
     if (isRecording) stopRecording();
 }
 
 // ============ SAVE TEXT ============
 function saveText() {
-    $('saveFilename').value = currentFilename.replace('.txt', '') + '_' + new Date().toISOString().slice(0,10) + '.txt';
+    $('saveFilename').value = currentFilename.replace(/\.txt$/, '') + '_' + new Date().toISOString().slice(0, 10) + '.txt';
     openModal('saveModal');
+    $('saveFilename').focus();
 }
 
 function confirmSaveText() {
@@ -887,14 +1320,19 @@ function confirmSaveText() {
     if (!name) name = 'texto_' + Date.now() + '.txt';
     if (!name.endsWith('.txt')) name += '.txt';
 
-    const item = {
-        id: Date.now(),
-        name: name,
-        content: editor.value,
-        date: new Date().toISOString()
-    };
-
-    savedTexts.unshift(item);
+    // Si ya existe un texto con el mismo nombre, se sobrescribe en vez de duplicarse
+    const existing = savedTexts.find(t => t.name === name);
+    if (existing) {
+        existing.content = editor.value;
+        existing.date = new Date().toISOString();
+    } else {
+        savedTexts.unshift({
+            id: Date.now(),
+            name,
+            content: editor.value,
+            date: new Date().toISOString()
+        });
+    }
     localStorage.setItem('tts_texts', JSON.stringify(savedTexts));
 
     currentFilename = name;
@@ -902,7 +1340,7 @@ function confirmSaveText() {
     closeModal('saveModal');
     renderFileList();
     updateCounts();
-    showToast('Texto guardado: ' + name, 'success');
+    showToast((existing ? 'Texto actualizado: ' : 'Texto guardado: ') + name, 'success');
 }
 
 function updateTabName(name) {
@@ -922,6 +1360,7 @@ function openFile(input) {
         updateCharCount();
         showToast('Archivo cargado: ' + file.name, 'success');
     };
+    reader.onerror = () => showToast('No se pudo leer el archivo', 'error');
     reader.readAsText(file);
     input.value = '';
 }
@@ -953,8 +1392,9 @@ function downloadSavedText(id) {
 }
 
 function exportAllTexts() {
-    const zipContent = savedTexts.map(t => `=== ${t.name} ===\n${t.content}\n\n`).join('');
-    downloadFile(zipContent, 'todos_los_textos.txt', 'text/plain');
+    if (savedTexts.length === 0) { showToast('No hay textos para exportar', 'warning'); return; }
+    const content = savedTexts.map(t => `=== ${t.name} ===\n${t.content}\n\n`).join('');
+    downloadFile(content, 'todos_los_textos.txt', 'text/plain');
     showToast('Todos los textos exportados', 'success');
 }
 
@@ -963,86 +1403,171 @@ function downloadCurrentText() {
     showToast('Texto descargado', 'success');
 }
 
-// ============ EXPORT MP3 ============
-function exportMP3() {
+// ============ EXPORT AUDIO ============
+function exportAudio() {
     const text = editor.value.trim();
     if (!text) { showToast('Escribe algo primero', 'warning'); return; }
-    $('mp3Filename').value = currentFilename.replace('.txt', '') + '.mp3';
-    openModal('mp3Modal');
+
+    const base = currentFilename.replace(/\.txt$/, '');
+    if (isPiperSelected()) {
+        $('audioModalInfo').innerHTML = 'El audio se generará directamente con <b>Piper</b> en formato WAV de alta calidad. No hace falta grabar nada.';
+        $('audioFilename').value = base + '.wav';
+    } else if (isPiperWebSelected()) {
+        $('audioModalInfo').innerHTML = 'El audio se generará con <b>Piper en el navegador</b> como WAV de alta calidad (a velocidad normal 1.0x). Si es la primera vez con esta voz, se descargará el modelo.';
+        $('audioFilename').value = base + '.wav';
+    } else {
+        $('audioModalInfo').innerHTML = 'Se grabará el audio mientras se lee el texto. El navegador te pedirá compartir una pestaña o pantalla: marca la casilla <b>"Compartir audio"</b>. El archivo se guarda en formato WebM. <br><br>💡 <b>Consejo:</b> con el servidor Piper activo, la exportación es directa a WAV y sin grabar la pantalla.';
+        $('audioFilename').value = base + '.webm';
+    }
+    openModal('audioModal');
+    $('audioFilename').focus();
 }
 
-async function confirmExportMP3() {
-    let name = $('mp3Filename').value.trim();
-    if (!name) name = 'audio_' + Date.now() + '.mp3';
-    if (!name.endsWith('.webm') && !name.endsWith('.mp3')) name += '.webm';
+async function confirmExportAudio() {
+    if (isPiperSelected()) {
+        await exportWithPiper(piperSynthesize, 'Piper');
+    } else if (isPiperWebSelected()) {
+        await exportWithPiper(piperWebSynthesize, 'Piper web');
+    } else {
+        await exportWithRecording();
+    }
+}
 
-    closeModal('mp3Modal');
+// ---- Exportación directa a WAV (ambos motores Piper) ----
+async function exportWithPiper(synthesize, engineName) {
+    let name = $('audioFilename').value.trim();
+    if (!name) name = 'audio_' + Date.now();
+    name = name.replace(/\.(mp3|webm|ogg)$/i, '');
+    if (!name.endsWith('.wav')) name += '.wav';
+
+    closeModal('audioModal');
+    setStatus(`⏳ Generando WAV con ${engineName}...`, 'recording');
 
     try {
-        // Solicitar captura de audio del sistema (o micrófono como fallback)
-        let stream;
+        const text = editor.value.trim();
+        const blob = await synthesize(text);
+
+        const item = {
+            id: Date.now(),
+            name,
+            size: (blob.size / 1024).toFixed(1) + ' KB',
+            date: new Date().toISOString()
+        };
         try {
-            stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-            // Solo nos quedamos con el audio
-            const audioTrack = stream.getAudioTracks()[0];
-            if (audioTrack) {
-                stream = new MediaStream([audioTrack]);
-            }
+            await dbPutAudio({ ...item, blob });
+            savedAudios.unshift(item);
         } catch (e) {
-            // Fallback: grabar micrófono (captura el audio del altavoz si está cerca)
-            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            console.error('No se pudo guardar en IndexedDB:', e);
         }
 
-        mediaRecorder = new MediaRecorder(stream);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        renderAudioList();
+        updateCounts();
+        setStatus('✅ Audio exportado');
+        showToast('WAV exportado: ' + name, 'success');
+    } catch (e) {
+        console.error(e);
+        setStatus('❌ Error');
+        showToast(`No se pudo generar el audio con ${engineName}`, 'error');
+        if (engineName === 'Piper') checkPiper();
+    }
+}
+
+// ---- Exportación grabando el sistema (voces del navegador) ----
+async function exportWithRecording() {
+    let name = $('audioFilename').value.trim();
+    if (!name) name = 'audio_' + Date.now();
+    // MediaRecorder produce WebM/Opus; renombrarlo .mp3 crearía un archivo mal etiquetado
+    name = name.replace(/\.(mp3|wav|ogg)$/i, '');
+    if (!name.endsWith('.webm')) name += '.webm';
+
+    closeModal('audioModal');
+
+    try {
+        let stream;
+        try {
+            const display = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+            const audioTrack = display.getAudioTracks()[0];
+            display.getVideoTracks().forEach(t => t.stop());
+            if (!audioTrack) {
+                display.getTracks().forEach(t => t.stop());
+                showToast('No se compartió el audio. Marca "Compartir audio" al elegir la pestaña.', 'warning');
+                return;
+            }
+            stream = new MediaStream([audioTrack]);
+        } catch (e) {
+            if (e.name === 'NotAllowedError') {
+                showToast('Grabación cancelada', 'warning');
+                return;
+            }
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            showToast('Grabando con micrófono (sube el volumen de los altavoces)', 'warning');
+        }
+
+        recordingStream = stream;
+        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
         audioChunks = [];
 
         mediaRecorder.ondataavailable = (e) => {
             if (e.data.size > 0) audioChunks.push(e.data);
         };
 
-        mediaRecorder.onstop = () => {
+        mediaRecorder.onstop = async () => {
             const blob = new Blob(audioChunks, { type: 'audio/webm' });
-            const url = URL.createObjectURL(blob);
-
-            // Guardar en localStorage (metadata)
-            const audioItem = {
+            const item = {
                 id: Date.now(),
-                name: name,
+                name,
                 size: (blob.size / 1024).toFixed(1) + ' KB',
-                date: new Date().toISOString(),
-                url: url
+                date: new Date().toISOString()
             };
-            savedAudios.unshift(audioItem);
-            localStorage.setItem('tts_audios', JSON.stringify(savedAudios));
 
-            // Descargar archivo
+            try {
+                await dbPutAudio({ ...item, blob });
+                savedAudios.unshift(item);
+            } catch (e) {
+                console.error('No se pudo guardar en IndexedDB:', e);
+                showToast('El audio se descargó pero no pudo guardarse en la lista', 'warning');
+            }
+
+            const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
             a.download = name;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
+            URL.revokeObjectURL(url);
 
             isRecording = false;
+            recordingStream?.getTracks().forEach(t => t.stop());
+            recordingStream = null;
             renderAudioList();
             updateCounts();
-            setStatus('✅ Audio exportado', '');
+            setStatus('✅ Audio exportado');
             showToast('Audio exportado: ' + name, 'success');
-
-            stream.getTracks().forEach(t => t.stop());
         };
 
         mediaRecorder.start();
         isRecording = true;
         setStatus('🔴 Grabando audio...', 'recording');
 
-        // Iniciar lectura
         setTimeout(() => speak(), 300);
 
     } catch (err) {
         console.error(err);
         showToast('Error al grabar. Permite el acceso al audio.', 'error');
         isRecording = false;
+        recordingStream?.getTracks().forEach(t => t.stop());
+        recordingStream = null;
+        setStatus('Listo');
     }
 }
 
@@ -1052,29 +1577,45 @@ function stopRecording() {
     }
 }
 
-function playAudio(id) {
-    const item = savedAudios.find(a => a.id === id);
-    if (!item) return;
+// ============ AUDIO LIST ============
+async function playAudio(id) {
+    const item = await dbGetAudio(id);
+    if (!item || !item.blob) { showToast('Audio no encontrado', 'error'); return; }
+    if (currentAudioUrl) URL.revokeObjectURL(currentAudioUrl);
+    currentAudioUrl = URL.createObjectURL(item.blob);
+    audioPlayer.src = currentAudioUrl;
+    audioPlayer.style.display = 'block';
+    audioPlayer.play();
+    showToast('Reproduciendo: ' + item.name, 'success');
+}
+
+async function downloadAudio(id) {
+    const item = await dbGetAudio(id);
+    if (!item || !item.blob) { showToast('Audio no encontrado', 'error'); return; }
+    const url = URL.createObjectURL(item.blob);
     const a = document.createElement('a');
-    a.href = item.url;
+    a.href = url;
     a.download = item.name;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
-function deleteAudio(id) {
+async function deleteAudio(id) {
+    try { await dbDeleteAudio(id); } catch (e) { console.error(e); }
     savedAudios = savedAudios.filter(a => a.id !== id);
-    localStorage.setItem('tts_audios', JSON.stringify(savedAudios));
     renderAudioList();
     updateCounts();
     showToast('Audio eliminado', 'success');
 }
 
-function clearAllAudio() {
+async function clearAllAudio() {
     if (!confirm('¿Eliminar todos los audios guardados?')) return;
+    try { await dbClearAudios(); } catch (e) { console.error(e); }
     savedAudios = [];
-    localStorage.setItem('tts_audios', JSON.stringify(savedAudios));
+    audioPlayer.pause();
+    audioPlayer.style.display = 'none';
     renderAudioList();
     updateCounts();
     showToast('Todos los audios eliminados', 'success');
@@ -1092,6 +1633,7 @@ function renderFileList() {
             <span class="f-icon">📄</span>
             <span class="f-name">${escapeHtml(t.name)}</span>
             <span class="f-date">${formatDate(t.date)}</span>
+            <span class="f-del" onclick="event.stopPropagation();downloadSavedText(${t.id})" title="Descargar">⬇️</span>
             <span class="f-del" onclick="event.stopPropagation();deleteSavedText(${t.id})" title="Eliminar">🗑️</span>
         </div>
     `).join('');
@@ -1104,12 +1646,12 @@ function renderAudioList() {
         return;
     }
     container.innerHTML = savedAudios.map(a => `
-        <div class="gh-file-item">
+        <div class="gh-file-item" onclick="playAudio(${a.id})">
             <span class="f-icon">🎵</span>
             <span class="f-name">${escapeHtml(a.name)}</span>
             <span class="f-date">${a.size}</span>
-            <span class="f-del" onclick="playAudio(${a.id})" title="Descargar">⬇️</span>
-            <span class="f-del" onclick="deleteAudio(${a.id})" title="Eliminar">🗑️</span>
+            <span class="f-del" onclick="event.stopPropagation();downloadAudio(${a.id})" title="Descargar">⬇️</span>
+            <span class="f-del" onclick="event.stopPropagation();deleteAudio(${a.id})" title="Eliminar">🗑️</span>
         </div>
     `).join('');
 }
@@ -1171,25 +1713,23 @@ function insertSample() {
     showToast('Texto de ejemplo insertado', 'success');
 }
 
-function speakSelection() {
-    const sel = editor.value.substring(editor.selectionStart, editor.selectionEnd);
-    if (!sel.trim()) { showToast('Selecciona texto primero', 'warning'); return; }
-
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(sel);
-    const idx = parseInt(voiceSelect.value);
-    if (!isNaN(idx) && voices[idx]) u.voice = voices[idx];
-    u.rate = parseFloat(rate.value);
-    u.pitch = parseFloat(pitch.value);
-    u.volume = parseFloat(volume.value);
-    u.lang = 'es-ES';
-    speechSynthesis.speak(u);
-    showToast('Leyendo selección...', 'success');
-}
-
 // ============ MODALS ============
 function openModal(id) { $(id).classList.add('show'); }
 function closeModal(id) { $(id).classList.remove('show'); }
+function anyModalOpen() {
+    return document.querySelector('.gh-modal-overlay.show');
+}
+
+// Enter confirma el modal abierto
+$('saveFilename').addEventListener('keydown', e => { if (e.key === 'Enter') confirmSaveText(); });
+$('audioFilename').addEventListener('keydown', e => { if (e.key === 'Enter') confirmExportAudio(); });
+
+// Clic fuera del modal lo cierra
+document.querySelectorAll('.gh-modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => {
+        if (e.target === overlay) overlay.classList.remove('show');
+    });
+});
 
 // ============ TOAST ============
 let toastTimeout;
@@ -1204,10 +1744,21 @@ function showToast(msg, type) {
 
 // ============ KEYBOARD ============
 document.addEventListener('keydown', (e) => {
+    // Escape: primero cierra el modal abierto; si no hay, detiene la lectura
+    if (e.code === 'Escape') {
+        const open = anyModalOpen();
+        if (open) { open.classList.remove('show'); return; }
+        stop();
+        return;
+    }
     if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
     if (e.code === 'Space') { e.preventDefault(); isSpeaking ? togglePause() : speak(); }
-    if (e.code === 'Escape') { stop(); }
     if (e.ctrlKey && e.key === 's') { e.preventDefault(); saveText(); }
+});
+
+// Avisar si se cierra la página mientras se graba
+window.addEventListener('beforeunload', (e) => {
+    if (isRecording) { e.preventDefault(); e.returnValue = ''; }
 });
 
 // ============ START ============
