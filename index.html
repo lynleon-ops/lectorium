@@ -114,7 +114,7 @@
             padding: 12px 16px;
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: flex-start;
             flex-wrap: wrap;
             gap: 8px;
             font-size: 13px;
@@ -662,7 +662,7 @@
         }
         @media (max-width: 600px) {
             .gh-header, .gh-footer, .gh-ribbon, .gh-layout { margin-left: 8px; margin-right: 8px; }
-            .gh-footer { justify-content: center; text-align: center; }
+            .gh-footer { justify-content: flex-start; text-align: left; }
             .gh-btn { padding: 5px 10px; font-size: 12px; }
             .gh-htab { padding: 5px 10px; font-size: 12px; }
         }
@@ -684,18 +684,13 @@
         <span class="rlabel">Inicio</span>
     </button>
     <div class="gh-ribbon-sep"></div>
-    <button class="gh-ribbon-btn folder" id="ribbonFolder" onclick="selectFolder()" title="Elegir la carpeta donde se guardarán los audios">
-        <span class="ic">📁</span>
-        <span class="rlabel">Seleccionar carpeta</span>
+    <button class="gh-ribbon-btn" onclick="speakSelection()" title="Leer solo el texto seleccionado">
+        <span class="ic">🔊</span>
+        <span class="rlabel">Leer selección</span>
     </button>
     <button class="gh-ribbon-btn" onclick="clearText()" title="Limpiar el editor">
         <span class="ic">🧹</span>
         <span class="rlabel">Limpiar</span>
-    </button>
-    <div class="gh-ribbon-sep"></div>
-    <button class="gh-ribbon-btn" id="ribbonAudios" onclick="switchView('audio')" title="Ver mis audios">
-        <span class="ic">🎵</span>
-        <span class="rlabel">Mis audios <span id="audioCount" style="font-weight:700">0</span></span>
     </button>
 </div>
 
@@ -726,7 +721,7 @@ Prueba escribiendo algo y presiona el botón ▶ para escucharlo.</textarea>
                     <span id="charInfo">0 caracteres | 0 palabras</span>
                 </div>
 
-                <!-- PLAYER: controles con icono + palabra, estilo GitHub Light -->
+                <!-- PLAYER: controles de lectura, estilo GitHub Light -->
                 <div class="gh-player">
                     <button class="gh-player-btn main" id="btnSpeak" onclick="speak()" title="Leer">
                         <span class="pic">▶</span> Leer
@@ -743,23 +738,7 @@ Prueba escribiendo algo y presiona el botón ▶ para escucharlo.</textarea>
                     <button class="gh-player-btn" id="btnForward" onclick="skipForward()" title="Avanzar">
                         <span class="pic">⏩</span> Avanza
                     </button>
-                    <div class="gh-player-spacer"></div>
-                    <button class="gh-player-btn generate" id="btnGenerate" onclick="exportAudio()" title="Generar y guardar el audio MP3">
-                        <span class="pic">⏺</span> Generar Audio
-                    </button>
                 </div>
-            </div>
-        </div>
-
-        <!-- AUDIO VIEW -->
-        <div id="view-audio" style="display:none">
-            <div class="gh-toolbar">
-                <button class="gh-btn gh-btn-primary" onclick="exportAudio()">➕ Nuevo MP3</button>
-                <button class="gh-btn gh-btn-danger" onclick="clearAllAudio()">🗑️ Borrar Todo</button>
-            </div>
-            <div class="gh-panel-body">
-                <audio id="audioPlayer" controls style="width:100%;margin-bottom:12px;display:none"></audio>
-                <div class="gh-file-list" id="audioList"></div>
             </div>
         </div>
     </main>
@@ -807,9 +786,7 @@ Prueba escribiendo algo y presiona el botón ▶ para escucharlo.</textarea>
 
 <!-- ===== FOOTER ===== -->
 <footer class="gh-footer">
-    <span class="gh-foot-name">Lectorium</span>
     <span id="footerCopyright"></span>
-    <span></span>
 </footer>
 
 <!-- ===== SAVE TEXT MODAL ===== -->
@@ -830,22 +807,15 @@ Prueba escribiendo algo y presiona el botón ▶ para escucharlo.</textarea>
 <!-- ===== TOAST ===== -->
 <div class="gh-toast" id="toast"></div>
 
-<!-- lamejs: codificador MP3 en el navegador (gratis) -->
-<script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
-
 <script>
 // ============ ESTADO ============
 let voices = [];
 let googleVoices = [];          // solo voces Google es-ES / es-US
 let isSpeaking = false;
 let isPaused = false;
-let isRecording = false;
-let mediaRecorder = null;
-let recordingStream = null;
-let audioChunks = [];
 let currentFilename = 'sin_titulo.txt';
 let savedTexts = loadJSON('tts_texts');
-let savedAudios = [];           // metadata en memoria; los blobs viven en IndexedDB
+let savedAudios = [];
 let speechQueue = [];
 let queueIndex = 0;
 let keepAliveTimer = null;
@@ -853,13 +823,6 @@ let currentAudioUrl = null;
 
 // Valores iniciales de la configuración de voz (para el botón Restablecer)
 const DEFAULTS = { rate: 1, pitch: 1, volume: 1 };
-
-// Handles de carpetas (File System Access API). Se recuerdan en IndexedDB.
-let audioSaveDir = null;   // última carpeta usada al guardar (para arrancar ahí la próxima vez)
-// Igual que Verbium: solo comprobamos si el navegador tiene la función.
-// (No bloqueamos por iframe; si el navegador la ofrece, se intenta y si Chrome
-//  la rechaza por contexto, se captura el error con un mensaje claro.)
-const fsaSupported = ('showDirectoryPicker' in window);
 
 function loadJSON(key) {
     try { return JSON.parse(localStorage.getItem(key) || '[]'); }
@@ -977,33 +940,11 @@ async function init() {
         speechSynthesis.onvoiceschanged = populateVoices;
     }
     updateCharCount();
-
-    try {
-        const items = await dbGetAllAudios();
-        savedAudios = items
-            .map(({ id, name, size, date }) => ({ id, name, size, date }))
-            .sort((a, b) => b.id - a.id);
-    } catch (e) {
-        console.error('IndexedDB no disponible:', e);
-        savedAudios = [];
-    }
-    renderAudioList();
-    updateCounts();
     switchView('editor');
-
-    // Restaurar la carpeta de audios elegida en sesiones anteriores
-    try {
-        const dir = await dbGetHandle('audioDir');
-        if (dir) {
-            audioSaveDir = dir;
-            const btn = $('ribbonFolder');
-            if (btn) { btn.classList.add('connected'); btn.querySelector('.rlabel').textContent = '📁 ' + dir.name; }
-        }
-    } catch (e) { console.warn('No se pudo restaurar la carpeta:', e); }
 
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
-    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v4.3. Todos los derechos reservados.`;
+    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v4.6. Todos los derechos reservados.`;
 }
 
 // ============ VOCES (solo Google es-ES / es-US) ============
@@ -1216,7 +1157,6 @@ function speakNextChunk() {
 function onSpeechFinished() {
     finishSpeechState();
     setStatus('✅ Finalizado');
-    if (isRecording) stopRecording();
 }
 
 function finishSpeechState() {
@@ -1226,7 +1166,7 @@ function finishSpeechState() {
     queueIndex = 0;
     stopKeepAlive();
     btnSpeak.innerHTML = '<span class="pic">▶</span> Leer';
-    btnPause.innerHTML = '<span class="pic">⏸</span>';
+    btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
 }
 
 function togglePause() {
@@ -1234,12 +1174,12 @@ function togglePause() {
     if (isPaused) {
         isPaused = false;
         speechSynthesis.resume();
-        btnPause.innerHTML = '<span class="pic">⏸</span>';
+        btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
         setStatus('🔊 Leyendo...', 'speaking');
     } else {
         isPaused = true;
         speechSynthesis.pause();
-        btnPause.innerHTML = '<span class="pic">▶</span>';
+        btnPause.innerHTML = '<span class="pic">▶</span> Reanudar';
         setStatus('⏸️ Pausado', 'paused');
     }
 }
@@ -1248,7 +1188,6 @@ function stop() {
     finishSpeechState();
     speechSynthesis.cancel();
     setStatus('⏹️ Detenido');
-    if (isRecording) stopRecording();
 }
 
 // Retroceder: salta ~2 fragmentos atrás en la lectura del navegador
@@ -1266,68 +1205,6 @@ function skipForward() {
     speechSynthesis.cancel();
     if (queueIndex >= speechQueue.length) { onSpeechFinished(); return; }
     speakNextChunk();
-}
-
-// Elegir la carpeta donde se guardarán los audios (como en Verbium).
-// No escribe directo (eso fallaba); solo fija dónde arranca el "Guardar como".
-async function selectFolder() {
-    if (!('showDirectoryPicker' in window)) {
-        showToast('Tu navegador no permite elegir carpeta. Usa Chrome/Edge de escritorio.', 'warning');
-        return;
-    }
-    try {
-        audioSaveDir = await window.showDirectoryPicker({ id: 'ttsAudio', mode: 'readwrite' });
-        try { await dbPutHandle('audioDir', audioSaveDir); } catch {}
-        const btn = $('ribbonFolder');
-        if (btn) {
-            btn.classList.add('connected');
-            btn.querySelector('.rlabel').textContent = '📁 ' + audioSaveDir.name;
-        }
-        showToast('Carpeta de audios: ' + audioSaveDir.name, 'success');
-    } catch (e) {
-        if (e.name === 'AbortError') return;
-        console.error(e);
-        showToast('No se pudo elegir la carpeta', 'warning');
-    }
-}
-
-// Guarda un blob en el disco. Usa "Guardar como" de Chrome (showSaveFilePicker)
-// que es el método más confiable: el propio navegador maneja el guardado.
-// Recuerda la última carpeta usada para que la próxima vez ya esté ahí.
-async function saveBlobToDisk(blob, filename, ext) {
-    const mime = ext === '.mp3' ? 'audio/mpeg' : 'audio/webm';
-    if ('showSaveFilePicker' in window) {
-        try {
-            const opts = {
-                suggestedName: filename,
-                types: [{
-                    description: ext === '.mp3' ? 'Audio MP3' : 'Audio WebM',
-                    accept: { [mime]: [ext] }
-                }]
-            };
-            if (audioSaveDir) opts.startIn = audioSaveDir;   // arranca en la última carpeta
-            const handle = await window.showSaveFilePicker(opts);
-            const writable = await handle.createWritable();
-            await writable.write(blob);
-            await writable.close();
-            // Recordar la carpeta padre para la próxima vez
-            try { audioSaveDir = await handle.getParent?.() || audioSaveDir; } catch {}
-            setStatus('✅ MP3 guardado');
-            showToast('✅ Guardado: ' + handle.name, 'success');
-            return;
-        } catch (e) {
-            if (e.name === 'AbortError') { showToast('Guardado cancelado', 'warning'); return; }
-            console.error('showSaveFilePicker falló, uso descarga:', e);
-        }
-    }
-    // Respaldo: descarga normal (va a la carpeta de Descargas del navegador)
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    setStatus('✅ MP3 descargado');
-    showToast('✅ Descargado: ' + filename, 'success');
 }
 
 // ============ GUARDAR TEXTO ============
@@ -1419,191 +1296,6 @@ function downloadCurrentText() {
     showToast('Texto descargado', 'success');
 }
 
-// ============ GENERAR AUDIO (MP3) — estilo ElevenLabs ============
-// Un solo botón: pide compartir la pestaña, e inmediatamente lee + graba.
-// Al terminar, convierte a MP3 y abre "Guardar como".
-async function exportAudio() {
-    const text = editor.value.trim();
-    if (!text) { showToast('Escribe algo primero', 'warning'); return; }
-    if (isRecording) { showToast('Ya se está grabando', 'warning'); return; }
-
-    const baseName = currentFilename.replace(/\.txt$/, '') || 'audio';
-
-    // 1) Pedir compartir la pestaña CON audio (esto debe salir del clic del usuario)
-    let stream;
-    try {
-        const display = await navigator.mediaDevices.getDisplayMedia({
-            video: true,
-            audio: true,
-            preferCurrentTab: true,
-            selfBrowserSurface: 'include'
-        });
-        const audioTrack = display.getAudioTracks()[0];
-        display.getVideoTracks().forEach(t => t.stop());   // no necesitamos video
-        if (!audioTrack) {
-            display.getTracks().forEach(t => t.stop());
-            showToast('⚠️ Debes activar "Compartir también el audio de la pestaña" y elegir la pestaña de Lectorium.', 'error');
-            return;
-        }
-        stream = new MediaStream([audioTrack]);
-    } catch (e) {
-        if (e.name === 'NotAllowedError') { showToast('Grabación cancelada', 'warning'); return; }
-        console.error(e);
-        showToast('No se pudo iniciar la grabación: ' + (e.message || e.name), 'error');
-        return;
-    }
-
-    // 2) Empezar a grabar
-    recordingStream = stream;
-    let mimeType = 'audio/webm';
-    if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = '';
-    mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-    audioChunks = [];
-    mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
-    mediaRecorder.onstop = () => finalizeRecording(baseName);
-
-    mediaRecorder.start();
-    isRecording = true;
-    setStatus('🔴 Grabando y leyendo...', 'recording');
-
-    // 3) Leer el texto (cuando termine, se detiene la grabación desde onSpeechFinished)
-    setTimeout(() => speak(), 400);
-}
-
-// Al detener la grabación: convertir a MP3 y guardar con "Guardar como"
-async function finalizeRecording(baseName) {
-    const webmBlob = new Blob(audioChunks, { type: 'audio/webm' });
-
-    if (webmBlob.size < 1000) {
-        // No se capturó audio: casi seguro no se marcó "Compartir audio"
-        isRecording = false;
-        recordingStream?.getTracks().forEach(t => t.stop());
-        recordingStream = null;
-        setStatus('⚠️ No se capturó audio');
-        showToast('⚠️ No se grabó audio. Al compartir, activa "Compartir también el audio de la pestaña".', 'error');
-        return;
-    }
-
-    let blob = webmBlob;
-    let ext = '.mp3';
-    setStatus('⏳ Convirtiendo a MP3...', 'recording');
-    try {
-        if (typeof lamejs !== 'undefined') {
-            blob = await convertToMp3(webmBlob);
-        } else {
-            ext = '.webm';
-            showToast('No se cargó el conversor MP3; se guarda como WebM', 'warning');
-        }
-    } catch (e) {
-        console.error('Conversión MP3 falló:', e);
-        blob = webmBlob;
-        ext = '.webm';
-        showToast('No se pudo convertir a MP3; se guarda como WebM', 'warning');
-    }
-
-    const name = baseName.replace(/\.(mp3|webm|wav|ogg)$/i, '') + ext;
-
-    // Registrar en "Mis audios"
-    const item = { id: Date.now(), name, size: (blob.size / 1024).toFixed(1) + ' KB', date: new Date().toISOString() };
-    try { await dbPutAudio({ ...item, blob }); savedAudios.unshift(item); }
-    catch (e) { console.error('IndexedDB:', e); }
-
-    isRecording = false;
-    recordingStream?.getTracks().forEach(t => t.stop());
-    recordingStream = null;
-    renderAudioList();
-    updateCounts();
-    setStatus('Listo');
-
-    // Guardar con "Guardar como" de Chrome
-    await saveBlobToDisk(blob, name, ext);
-}
-
-// Convierte un Blob de audio (WebM/Opus) a MP3 real usando Web Audio + lamejs
-async function convertToMp3(blob) {
-    const arrayBuf = await blob.arrayBuffer();
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    const ctx = new AudioCtx();
-    const audioBuf = await ctx.decodeAudioData(arrayBuf);
-    ctx.close();
-
-    const sampleRate = audioBuf.sampleRate;
-    const channels = Math.min(audioBuf.numberOfChannels, 2);
-    const kbps = 128;
-    const encoder = new lamejs.Mp3Encoder(channels, sampleRate, kbps);
-
-    // Float [-1,1] -> Int16
-    const toInt16 = (f32) => {
-        const out = new Int16Array(f32.length);
-        for (let i = 0; i < f32.length; i++) {
-            const s = Math.max(-1, Math.min(1, f32[i]));
-            out[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-        }
-        return out;
-    };
-
-    const left = toInt16(audioBuf.getChannelData(0));
-    const right = channels > 1 ? toInt16(audioBuf.getChannelData(1)) : null;
-
-    const mp3Data = [];
-    const block = 1152;
-    for (let i = 0; i < left.length; i += block) {
-        const l = left.subarray(i, i + block);
-        const r = right ? right.subarray(i, i + block) : null;
-        const chunk = right ? encoder.encodeBuffer(l, r) : encoder.encodeBuffer(l);
-        if (chunk.length > 0) mp3Data.push(chunk);
-    }
-    const end = encoder.flush();
-    if (end.length > 0) mp3Data.push(end);
-
-    return new Blob(mp3Data, { type: 'audio/mpeg' });
-}
-
-function stopRecording() {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-}
-
-// ============ LISTA DE AUDIOS ============
-async function playAudio(id) {
-    const item = await dbGetAudio(id);
-    if (!item || !item.blob) { showToast('Audio no encontrado', 'error'); return; }
-    if (currentAudioUrl) URL.revokeObjectURL(currentAudioUrl);
-    currentAudioUrl = URL.createObjectURL(item.blob);
-    audioPlayer.src = currentAudioUrl;
-    audioPlayer.style.display = 'block';
-    audioPlayer.play();
-    showToast('Reproduciendo: ' + item.name, 'success');
-}
-
-async function downloadAudio(id) {
-    const item = await dbGetAudio(id);
-    if (!item || !item.blob) { showToast('Audio no encontrado', 'error'); return; }
-    const url = URL.createObjectURL(item.blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = item.name;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-}
-
-async function deleteAudio(id) {
-    try { await dbDeleteAudio(id); } catch (e) { console.error(e); }
-    savedAudios = savedAudios.filter(a => a.id !== id);
-    renderAudioList();
-    updateCounts();
-    showToast('Audio eliminado', 'success');
-}
-
-async function clearAllAudio() {
-    if (!confirm('¿Eliminar todos los audios guardados?')) return;
-    try { await dbClearAudios(); } catch (e) { console.error(e); }
-    savedAudios = [];
-    audioPlayer.pause();
-    audioPlayer.style.display = 'none';
-    renderAudioList();
-    updateCounts();
-    showToast('Todos los audios eliminados', 'success');
-}
-
 // ============ RENDER LISTAS ============
 function renderFileList() {
     const container = $('fileList');
@@ -1623,36 +1315,10 @@ function renderFileList() {
     `).join('');
 }
 
-function renderAudioList() {
-    const container = $('audioList');
-    if (savedAudios.length === 0) {
-        container.innerHTML = '<div class="gh-empty"><span class="icon">🎵</span>No hay audios exportados aún</div>';
-        return;
-    }
-    container.innerHTML = savedAudios.map(a => `
-        <div class="gh-file-item" onclick="playAudio(${a.id})">
-            <span class="f-icon">🎵</span>
-            <span class="f-name">${escapeHtml(a.name)}</span>
-            <span class="f-date">${a.size}</span>
-            <span class="f-del" onclick="event.stopPropagation();downloadAudio(${a.id})" title="Descargar">⬇️</span>
-            <span class="f-del" onclick="event.stopPropagation();deleteAudio(${a.id})" title="Eliminar">🗑️</span>
-        </div>
-    `).join('');
-}
-
-function updateCounts() {
-    const ac = $('audioCount');
-    if (ac) ac.textContent = savedAudios.length;
-}
-
 // ============ VISTAS ============
 function switchView(view) {
-    $('view-editor').style.display = view === 'editor' ? 'block' : 'none';
-    $('view-audio').style.display = view === 'audio' ? 'block' : 'none';
-    // Resaltar el botón activo del ribbon (Inicio vs Mis audios)
-    $('ribbonInicio')?.classList.toggle('active', view === 'editor');
-    $('ribbonAudios')?.classList.toggle('active', view === 'audio');
-    if (view === 'audio') renderAudioList();
+    $('view-editor').style.display = 'block';
+    $('ribbonInicio')?.classList.toggle('active', true);
 }
 
 // ============ UTILIDADES ============
@@ -1718,10 +1384,6 @@ document.addEventListener('keydown', (e) => {
     }
     if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
     if (e.code === 'Space') { e.preventDefault(); isSpeaking ? togglePause() : speak(); }
-});
-
-window.addEventListener('beforeunload', (e) => {
-    if (isRecording) { e.preventDefault(); e.returnValue = ''; }
 });
 
 // ============ INICIO ============
