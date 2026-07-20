@@ -836,18 +836,45 @@ Prueba escribiendo algo y presiona el botón ▶ para escucharlo.</textarea>
             </div>
         </div>
 
-        <!-- Google Cloud (voces WaveNet + MP3) -->
+        <!-- Botón discreto al área de administración -->
         <div class="gh-panel">
-            <div class="gh-panel-header">☁️ Google Cloud (MP3)</div>
-            <div class="gh-panel-body">
+            <div class="gh-panel-body" style="text-align:center">
+                <button class="gh-btn" style="width:100%;font-size:12px" onclick="openAdmin()">🔒 Área de administración</button>
+                <div id="gcloudMini" style="font-size:11px;color:var(--text-muted);margin-top:6px"></div>
+            </div>
+        </div>
+    </aside>
+
+</div>
+
+<!-- ===== MODAL ÁREA DE ADMIN ===== -->
+<div class="gh-modal-overlay" id="adminModal">
+    <div class="gh-modal" style="max-width:440px">
+        <div class="gh-modal-header">🔒 Área de administración</div>
+
+        <!-- Login de admin -->
+        <div class="gh-modal-body" id="adminLogin">
+            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Introduce tus credenciales de administrador.</p>
+            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px">Email</label>
+            <input type="email" id="adminEmail" autocomplete="off" placeholder="correo@ejemplo.com"
+                style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;margin-bottom:10px">
+            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px">Contraseña</label>
+            <input type="password" id="adminPass" autocomplete="off" placeholder="••••••••"
+                style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px">
+            <div id="adminError" style="font-size:12px;color:var(--danger);min-height:18px;margin-top:8px"></div>
+        </div>
+
+        <!-- Contenido del admin (oculto hasta iniciar sesión) -->
+        <div class="gh-modal-body" id="adminContent" style="display:none">
+            <!-- Google Cloud -->
+            <div style="margin-bottom:18px">
+                <div style="font-weight:600;font-size:14px;margin-bottom:8px">☁️ Google Cloud (voces + MP3)</div>
                 <div id="gcloudStatus" style="font-size:12px;margin-bottom:8px;color:var(--text-secondary)">
                     Sin conectar. Pega tu clave para activar voces de alta calidad y descarga MP3.
                 </div>
-                <div class="gh-control">
-                    <label>Clave de API</label>
-                    <input type="password" id="gcloudKey" placeholder="AIza..." autocomplete="off"
-                        style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-family:var(--font-mono);font-size:12px">
-                </div>
+                <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px">Clave de API</label>
+                <input type="password" id="gcloudKey" placeholder="AIza..." autocomplete="off"
+                    style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-family:var(--font-mono);font-size:12px">
                 <div style="display:flex;gap:6px;margin-top:8px">
                     <button class="gh-btn gh-btn-primary" style="flex:1" onclick="saveGcloudKey()">Conectar</button>
                     <button class="gh-btn" onclick="clearGcloudKey()" title="Olvidar la clave">Olvidar</button>
@@ -856,9 +883,23 @@ Prueba escribiendo algo y presiona el botón ▶ para escucharlo.</textarea>
                     La clave se guarda solo en este navegador. Restríngela a tu dominio en Google Cloud.
                 </div>
             </div>
-        </div>
-    </aside>
 
+            <!-- Contador de caracteres -->
+            <div style="border-top:1px solid var(--border);padding-top:16px">
+                <div style="font-weight:600;font-size:14px;margin-bottom:8px">📊 Caracteres procesados</div>
+                <div id="usageBox" style="font-size:13px;line-height:1.9"></div>
+                <button class="gh-btn" style="margin-top:10px;font-size:12px" onclick="resetUsage()">↺ Reiniciar contador del mes</button>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5">
+                    Conteo local aproximado, para tu control. El oficial está en Google Cloud Console.
+                </div>
+            </div>
+        </div>
+
+        <div class="gh-modal-footer">
+            <button class="gh-btn" onclick="closeModal('adminModal')">Cerrar</button>
+            <button class="gh-btn gh-btn-primary" id="adminLoginBtn" onclick="adminSignIn()">Entrar</button>
+        </div>
+    </div>
 </div>
 
 <!-- ===== FOOTER ===== -->
@@ -1019,15 +1060,118 @@ async function init() {
     updateCharCount();
     switchView('editor');
 
-    // Si hay una clave de Google Cloud guardada, mostrarla y verificarla
+    // Si hay una clave de Google Cloud guardada, verificarla (activa las voces cloud)
     if (gcloudKey) {
-        $('gcloudKey').value = gcloudKey;
+        const kf = $('gcloudKey'); if (kf) kf.value = gcloudKey;
         verifyGcloud();
     }
+    updateUsageMini();
 
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
-    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v5.2. Todos los derechos reservados.`;
+    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v5.3. Todos los derechos reservados.`;
+}
+
+// ============ ÁREA DE ADMINISTRACIÓN (email + contraseña portero) ============
+const ADMIN_EMAIL_HASH = '687684801f2342761e68f559e03faecf1b84afa352c1af7b8b665c39f17c1cc6';
+const ADMIN_PASS_HASH  = 'aadbb2c7f1dea31c7c758d0c63c28729f52c9fd77842238445293393dfd27fbf';
+const ADMIN_SALT = 'lectorium-admin-';
+
+async function sha256(text) {
+    const data = new TextEncoder().encode(text);
+    const buf = await crypto.subtle.digest('SHA-256', data);
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function openAdmin() {
+    // Si ya inició sesión en esta sesión, mostrar directo el contenido
+    if (sessionStorage.getItem('lectorium_admin') === '1') {
+        showAdminContent();
+    } else {
+        $('adminLogin').style.display = 'block';
+        $('adminContent').style.display = 'none';
+        $('adminLoginBtn').style.display = 'inline-block';
+        $('adminError').textContent = '';
+    }
+    openModal('adminModal');
+    if (sessionStorage.getItem('lectorium_admin') !== '1') $('adminEmail')?.focus();
+}
+
+async function adminSignIn() {
+    const email = $('adminEmail').value.toLowerCase().trim();
+    const pass = $('adminPass').value;
+    if (!email || !pass) { $('adminError').textContent = 'Completa email y contraseña'; return; }
+    const eh = await sha256(ADMIN_SALT + email);
+    const ph = await sha256(ADMIN_SALT + pass);
+    if (eh === ADMIN_EMAIL_HASH && ph === ADMIN_PASS_HASH) {
+        sessionStorage.setItem('lectorium_admin', '1');
+        $('adminEmail').value = ''; $('adminPass').value = '';
+        showAdminContent();
+    } else {
+        $('adminError').textContent = 'Email o contraseña incorrectos';
+        $('adminPass').value = '';
+    }
+}
+
+function showAdminContent() {
+    $('adminLogin').style.display = 'none';
+    $('adminContent').style.display = 'block';
+    $('adminLoginBtn').style.display = 'none';
+    if (gcloudKey) $('gcloudKey').value = gcloudKey;
+    renderUsage();
+}
+
+// ---- Contador de caracteres procesados (local) ----
+function usageData() {
+    const raw = localStorage.getItem('lectorium_usage');
+    const mesActual = new Date().toISOString().slice(0, 7); // "2026-07"
+    let d = raw ? JSON.parse(raw) : { mes: mesActual, mesChars: 0, totalChars: 0, wavenet: 0, neural2: 0, standard: 0 };
+    // Si cambió el mes, reiniciar el contador mensual (pero conservar el total)
+    if (d.mes !== mesActual) { d.mes = mesActual; d.mesChars = 0; d.wavenet = 0; d.neural2 = 0; d.standard = 0; }
+    return d;
+}
+
+function addUsage(chars, tipo) {
+    const d = usageData();
+    d.mesChars += chars;
+    d.totalChars += chars;
+    if (tipo === 'Wavenet') d.wavenet += chars;
+    else if (tipo === 'Neural2') d.neural2 += chars;
+    else if (tipo === 'Standard') d.standard += chars;
+    localStorage.setItem('lectorium_usage', JSON.stringify(d));
+    updateUsageMini();
+}
+
+function fmt(n) { return n.toLocaleString('es'); }
+
+function renderUsage() {
+    const d = usageData();
+    const box = $('usageBox');
+    if (!box) return;
+    const pctWave = Math.min(100, (d.wavenet / 1000000 * 100)).toFixed(1);
+    const pctStd = Math.min(100, (d.standard / 4000000 * 100)).toFixed(1);
+    box.innerHTML =
+        `<div><b>Este mes (${d.mes}):</b> ${fmt(d.mesChars)} caracteres</div>` +
+        `<div style="color:var(--text-secondary)">• WaveNet: ${fmt(d.wavenet)} / 1.000.000 (${pctWave}% del cupo gratis)</div>` +
+        `<div style="color:var(--text-secondary)">• Neural2: ${fmt(d.neural2)} / 1.000.000</div>` +
+        `<div style="color:var(--text-secondary)">• Standard: ${fmt(d.standard)} / 4.000.000 (${pctStd}%)</div>` +
+        `<div style="margin-top:6px;border-top:1px dashed var(--border);padding-top:6px"><b>Total histórico:</b> ${fmt(d.totalChars)} caracteres</div>`;
+}
+
+function updateUsageMini() {
+    const d = usageData();
+    const mini = $('gcloudMini');
+    if (mini) mini.textContent = gcloudKey ? `${fmt(d.mesChars)} caracteres este mes` : '';
+    renderUsage();
+}
+
+function resetUsage() {
+    if (!confirm('¿Reiniciar el contador de este mes? (el total histórico se conserva)')) return;
+    const d = usageData();
+    d.mesChars = 0; d.wavenet = 0; d.neural2 = 0; d.standard = 0;
+    localStorage.setItem('lectorium_usage', JSON.stringify(d));
+    renderUsage(); updateUsageMini();
+    showToast('Contador del mes reiniciado', 'success');
 }
 
 // ============ GOOGLE CLOUD TTS (voces WaveNet + MP3) ============
@@ -1119,6 +1263,8 @@ async function gcloudSynthesize(text) {
     const cv = getCloudVoice();
     if (!cv) throw new Error('No hay voz de Google Cloud seleccionada');
 
+    const cleanText = cleanForSpeech(text);
+
     const rate = parseFloat($('rate').value) || 1;
     const pitchRange = (parseFloat($('pitch').value) || 1);
     // La API usa pitch en semitonos (-20 a 20); mapeo el slider (0.5-2) a un rango suave
@@ -1127,7 +1273,7 @@ async function gcloudSynthesize(text) {
     const volumeGainDb = volume <= 0 ? -96 : (volume - 1) * 16;  // 0->-96dB, 1->0dB
 
     const body = {
-        input: { text: cleanForSpeech(text) },
+        input: { text: cleanText },
         voice: { languageCode: cv.languageCode, name: cv.name },
         audioConfig: {
             audioEncoding: 'MP3',
@@ -1147,6 +1293,9 @@ async function gcloudSynthesize(text) {
         throw new Error(err.error?.message || `Error ${resp.status}`);
     }
     const data = await resp.json();
+    // Contar los caracteres procesados (para el panel de admin)
+    const tipo = /Neural2/i.test(cv.name) ? 'Neural2' : /Wavenet/i.test(cv.name) ? 'Wavenet' : 'Standard';
+    addUsage(cleanText.length, tipo);
     // La API devuelve el MP3 en base64
     const bytes = Uint8Array.from(atob(data.audioContent), c => c.charCodeAt(0));
     return new Blob([bytes], { type: 'audio/mpeg' });
