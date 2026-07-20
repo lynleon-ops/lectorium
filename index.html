@@ -738,6 +738,10 @@ Prueba escribiendo algo y presiona el botón ▶ para escucharlo.</textarea>
                     <button class="gh-player-btn" id="btnForward" onclick="skipForward()" title="Avanzar">
                         <span class="pic">⏩</span> Avanza
                     </button>
+                    <div class="gh-player-spacer"></div>
+                    <button class="gh-player-btn generate" id="btnGenerate" onclick="generateMp3()" title="Generar y descargar MP3 con Google Cloud" style="display:none">
+                        <span class="pic">⬇</span> Generar MP3
+                    </button>
                 </div>
             </div>
         </div>
@@ -777,6 +781,28 @@ Prueba escribiendo algo y presiona el botón ▶ para escucharlo.</textarea>
                         <input type="range" id="volume" min="0" max="1" step="0.05" value="1">
                         <span class="gh-range-val" id="volVal">100%</span>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Google Cloud (voces WaveNet + MP3) -->
+        <div class="gh-panel">
+            <div class="gh-panel-header">☁️ Google Cloud (MP3)</div>
+            <div class="gh-panel-body">
+                <div id="gcloudStatus" style="font-size:12px;margin-bottom:8px;color:var(--text-secondary)">
+                    Sin conectar. Pega tu clave para activar voces de alta calidad y descarga MP3.
+                </div>
+                <div class="gh-control">
+                    <label>Clave de API</label>
+                    <input type="password" id="gcloudKey" placeholder="AIza..." autocomplete="off"
+                        style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-family:var(--font-mono);font-size:12px">
+                </div>
+                <div style="display:flex;gap:6px;margin-top:8px">
+                    <button class="gh-btn gh-btn-primary" style="flex:1" onclick="saveGcloudKey()">Conectar</button>
+                    <button class="gh-btn" onclick="clearGcloudKey()" title="Olvidar la clave">Olvidar</button>
+                </div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5">
+                    La clave se guarda solo en este navegador. Restríngela a tu dominio en Google Cloud.
                 </div>
             </div>
         </div>
@@ -942,9 +968,202 @@ async function init() {
     updateCharCount();
     switchView('editor');
 
+    // Si hay una clave de Google Cloud guardada, mostrarla y verificarla
+    if (gcloudKey) {
+        $('gcloudKey').value = gcloudKey;
+        verifyGcloud();
+    }
+
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
-    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v4.6. Todos los derechos reservados.`;
+    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v5.0. Todos los derechos reservados.`;
+}
+
+// ============ GOOGLE CLOUD TTS (voces WaveNet + MP3) ============
+let gcloudKey = localStorage.getItem('gcloud_tts_key') || '';
+let gcloudVoices = [];   // voces WaveNet/Neural en español que ofrece la API
+
+const GCLOUD_ENDPOINT = 'https://texttospeech.googleapis.com/v1';
+
+function saveGcloudKey() {
+    const key = $('gcloudKey').value.trim();
+    if (!key) { showToast('Pega tu clave de API primero', 'warning'); return; }
+    gcloudKey = key;
+    localStorage.setItem('gcloud_tts_key', key);
+    verifyGcloud();
+}
+
+function clearGcloudKey() {
+    gcloudKey = '';
+    localStorage.removeItem('gcloud_tts_key');
+    gcloudVoices = [];
+    $('gcloudKey').value = '';
+    $('btnGenerate').style.display = 'none';
+    $('gcloudStatus').textContent = 'Sin conectar. Pega tu clave para activar voces de alta calidad y descarga MP3.';
+    $('gcloudStatus').style.color = 'var(--text-secondary)';
+    populateVoices();
+    showToast('Clave olvidada', 'success');
+}
+
+// Comprobar la clave listando las voces en español de la API
+async function verifyGcloud() {
+    if (!gcloudKey) return;
+    $('gcloudStatus').textContent = '⏳ Verificando clave...';
+    $('gcloudStatus').style.color = 'var(--text-secondary)';
+    try {
+        const resp = await fetch(`${GCLOUD_ENDPOINT}/voices?languageCode=es&key=${encodeURIComponent(gcloudKey)}`);
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.error?.message || `Error ${resp.status}`);
+        }
+        const data = await resp.json();
+        // Nos quedamos con voces WaveNet y Neural2 en español (mejor calidad)
+        gcloudVoices = (data.voices || [])
+            .filter(v => /Wavenet|Neural2/i.test(v.name))
+            .filter(v => (v.languageCodes || []).some(l => l.toLowerCase().startsWith('es')))
+            .sort((a, b) => a.name.localeCompare(b.name));
+
+        if (gcloudVoices.length === 0) {
+            // Respaldo: cualquier voz española que devuelva la API
+            gcloudVoices = (data.voices || [])
+                .filter(v => (v.languageCodes || []).some(l => l.toLowerCase().startsWith('es')))
+                .sort((a, b) => a.name.localeCompare(b.name));
+        }
+
+        $('gcloudStatus').textContent = `✅ Conectado. ${gcloudVoices.length} voces de alta calidad disponibles.`;
+        $('gcloudStatus').style.color = 'var(--success)';
+        $('btnGenerate').style.display = 'inline-flex';
+        populateVoices();   // añade las voces cloud al menú
+        showToast('Google Cloud conectado', 'success');
+    } catch (e) {
+        console.error(e);
+        gcloudVoices = [];
+        $('btnGenerate').style.display = 'none';
+        $('gcloudStatus').textContent = '⚠️ No se pudo conectar: ' + (e.message || e);
+        $('gcloudStatus').style.color = 'var(--danger)';
+        populateVoices();
+    }
+}
+
+// ¿La voz seleccionada es una voz de Google Cloud?
+function selectedIsCloud() {
+    return voiceSelect.value.startsWith('cloud:');
+}
+
+// Nombre de la voz cloud seleccionada (ej. "es-ES-Wavenet-C") y su idioma
+function getCloudVoice() {
+    if (!selectedIsCloud()) return null;
+    const name = voiceSelect.value.slice('cloud:'.length);
+    const v = gcloudVoices.find(x => x.name === name);
+    if (!v) return null;
+    const lang = (v.languageCodes || []).find(l => l.toLowerCase().startsWith('es')) || 'es-ES';
+    return { name: v.name, languageCode: lang };
+}
+
+// Llamar a la API y obtener el audio MP3 (como Blob)
+async function gcloudSynthesize(text) {
+    const cv = getCloudVoice();
+    if (!cv) throw new Error('No hay voz de Google Cloud seleccionada');
+
+    const rate = parseFloat($('rate').value) || 1;
+    const pitchRange = (parseFloat($('pitch').value) || 1);
+    // La API usa pitch en semitonos (-20 a 20); mapeo el slider (0.5-2) a un rango suave
+    const pitch = Math.round((pitchRange - 1) * 10);
+    const volume = parseFloat($('volume').value);
+    const volumeGainDb = volume <= 0 ? -96 : (volume - 1) * 16;  // 0->-96dB, 1->0dB
+
+    const body = {
+        input: { text: cleanForSpeech(text) },
+        voice: { languageCode: cv.languageCode, name: cv.name },
+        audioConfig: {
+            audioEncoding: 'MP3',
+            speakingRate: Math.min(4, Math.max(0.25, rate)),
+            pitch: Math.min(20, Math.max(-20, pitch)),
+            volumeGainDb: Math.min(16, Math.max(-96, volumeGainDb))
+        }
+    };
+
+    const resp = await fetch(`${GCLOUD_ENDPOINT}/text:synthesize?key=${encodeURIComponent(gcloudKey)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+    if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error?.message || `Error ${resp.status}`);
+    }
+    const data = await resp.json();
+    // La API devuelve el MP3 en base64
+    const bytes = Uint8Array.from(atob(data.audioContent), c => c.charCodeAt(0));
+    return new Blob([bytes], { type: 'audio/mpeg' });
+}
+
+let cloudAudioEl = null;
+
+// Leer con voz de Google Cloud (reproduce el MP3 en el navegador)
+async function speakCloud(text) {
+    setStatus('⏳ Generando voz de alta calidad...', 'speaking');
+    $('btnSpeak').disabled = true;
+    try {
+        const blob = await gcloudSynthesize(text);
+        const url = URL.createObjectURL(blob);
+        if (cloudAudioEl) { cloudAudioEl.pause(); }
+        cloudAudioEl = new Audio(url);
+        cloudAudioEl.onended = () => { setStatus('✅ Finalizado'); URL.revokeObjectURL(url); };
+        cloudAudioEl.onerror = () => { setStatus('⚠️ Error al reproducir'); };
+        setStatus('🔊 Leyendo (Google Cloud)...', 'speaking');
+        cloudAudioEl.play();
+    } catch (e) {
+        console.error(e);
+        showToast('Error de Google Cloud: ' + (e.message || e), 'error');
+        setStatus('Listo');
+    } finally {
+        $('btnSpeak').disabled = false;
+    }
+}
+
+// Generar y DESCARGAR el MP3 con Google Cloud
+async function generateMp3() {
+    const text = editor.value.trim();
+    if (!text) { showToast('Escribe algo primero', 'warning'); return; }
+    if (!gcloudKey) { showToast('Conecta tu clave de Google Cloud primero', 'warning'); return; }
+    if (!selectedIsCloud()) { showToast('Elige una voz de Google Cloud (marcadas con ☁️)', 'warning'); return; }
+
+    $('btnGenerate').disabled = true;
+    setStatus('⏳ Generando MP3 con Google Cloud...', 'recording');
+    try {
+        const blob = await gcloudSynthesize(text);
+        const name = (currentFilename.replace(/\.txt$/, '') || 'audio') + '.mp3';
+        // Guardar con "Guardar como" si el navegador lo permite; si no, descarga normal
+        if ('showSaveFilePicker' in window) {
+            try {
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: name,
+                    types: [{ description: 'Audio MP3', accept: { 'audio/mpeg': ['.mp3'] } }]
+                });
+                const w = await handle.createWritable();
+                await w.write(blob); await w.close();
+                setStatus('✅ MP3 guardado');
+                showToast('✅ Guardado: ' + handle.name, 'success');
+                return;
+            } catch (e) {
+                if (e.name === 'AbortError') { setStatus('Listo'); return; }
+            }
+        }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = name;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setStatus('✅ MP3 descargado');
+        showToast('✅ MP3 descargado: ' + name, 'success');
+    } catch (e) {
+        console.error(e);
+        showToast('Error al generar MP3: ' + (e.message || e), 'error');
+        setStatus('Listo');
+    } finally {
+        $('btnGenerate').disabled = false;
+    }
 }
 
 // ============ VOCES (solo Google es-ES / es-US) ============
@@ -972,22 +1191,48 @@ function populateVoices() {
 
     const previous = voiceSelect.value;
     voiceSelect.innerHTML = '';
+
+    // Primero, las voces de Google Cloud (alta calidad) si hay clave
+    if (gcloudVoices.length > 0) {
+        const grp = document.createElement('optgroup');
+        grp.label = '☁️ Google Cloud (alta calidad + MP3)';
+        gcloudVoices.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = 'cloud:' + v.name;
+            const lang = (v.languageCodes || [])[0] || '';
+            const pais = lang.toLowerCase().includes('us') ? '🇺🇸' :
+                         lang.toLowerCase().includes('mx') ? '🇲🇽' : '🇪🇸';
+            const tipo = /Neural2/i.test(v.name) ? 'Neural2' : 'WaveNet';
+            const letra = v.name.split('-').pop();
+            const genero = v.ssmlGender === 'FEMALE' ? 'mujer' : v.ssmlGender === 'MALE' ? 'hombre' : '';
+            opt.textContent = `${pais} ${tipo} ${letra}${genero ? ' (' + genero + ')' : ''}`;
+            grp.appendChild(opt);
+        });
+        voiceSelect.appendChild(grp);
+    }
+
+    // Luego, las voces del navegador
+    const grpNav = document.createElement('optgroup');
+    grpNav.label = '🔊 Navegador (solo lectura)';
     list.forEach(v => {
         const opt = document.createElement('option');
         opt.value = voices.indexOf(v);
         const pais = v.lang.toLowerCase().includes('us') ? '🇺🇸 EE.UU.' : '🇪🇸 España';
         opt.textContent = `${v.name.replace(/^Google\s*/i, '')} — ${pais}`;
-        voiceSelect.appendChild(opt);
+        grpNav.appendChild(opt);
     });
+    if (list.length > 0) voiceSelect.appendChild(grpNav);
 
     const hint = $('voiceHint');
-    if (list.length === 0) {
+    if (list.length === 0 && gcloudVoices.length === 0) {
         const opt = document.createElement('option');
         opt.textContent = 'No hay voces en español disponibles';
         voiceSelect.appendChild(opt);
-        hint.textContent = 'Abre la app en Google Chrome para ver las voces de Google.';
+        hint.textContent = 'Abre la app en Google Chrome, o conecta Google Cloud.';
+    } else if (gcloudVoices.length > 0) {
+        hint.textContent = 'Las voces ☁️ leen y generan MP3. Las 🔊 solo leen.';
     } else if (usingFallback) {
-        hint.textContent = 'No se encontraron voces "Google". Mostrando otras voces en español del sistema.';
+        hint.textContent = 'Mostrando voces en español del sistema.';
     } else {
         hint.textContent = `${list.length} ${list.length === 1 ? 'voz' : 'voces'} de Google en español.`;
     }
@@ -1040,12 +1285,14 @@ function setStatus(msg, type) {
 function speak() {
     const text = editor.value.trim();
     if (!text) { showToast('Escribe algo primero', 'warning'); return; }
+    if (selectedIsCloud()) { speakCloud(text); return; }
     startSpeech(text);
 }
 
 function speakSelection() {
     const sel = editor.value.substring(editor.selectionStart, editor.selectionEnd);
     if (!sel.trim()) { showToast('Selecciona texto primero', 'warning'); return; }
+    if (selectedIsCloud()) { speakCloud(sel.trim()); showToast('Leyendo selección...', 'success'); return; }
     startSpeech(sel.trim());
     showToast('Leyendo selección...', 'success');
 }
@@ -1187,6 +1434,7 @@ function togglePause() {
 function stop() {
     finishSpeechState();
     speechSynthesis.cancel();
+    if (cloudAudioEl) { cloudAudioEl.pause(); cloudAudioEl.currentTime = 0; }
     setStatus('⏹️ Detenido');
 }
 
