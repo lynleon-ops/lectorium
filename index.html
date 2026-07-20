@@ -14,6 +14,7 @@
             --bg-tertiary: #eaeef2;
             --border: #d0d7de;
             --border-light: #e5e7eb;
+            --border-strong: #afb8c1;
             --text: #1f2328;
             --text-secondary: #656d76;
             --text-muted: #8c959f;
@@ -142,92 +143,102 @@
             margin: 8px auto 0;
             background: var(--bg);
             border: 1px solid var(--border);
-            padding: 6px 16px;
+            padding: 8px 16px;
             display: flex;
-            align-items: stretch;
-            gap: 4px;
+            align-items: center;
+            gap: 6px;
             overflow-x: auto;
         }
         .gh-ribbon-btn {
-            display: flex;
-            flex-direction: column;
+            display: inline-flex;
+            flex-direction: row;
             align-items: center;
-            gap: 4px;
-            min-width: 76px;
-            padding: 8px 12px;
-            border: none;
+            gap: 7px;
+            padding: 7px 14px;
+            border: 1px solid transparent;
             background: transparent;
-            border-radius: 8px;
+            border-radius: var(--radius);
             cursor: pointer;
             color: var(--text-secondary);
-            font-size: 11px;
-            font-weight: 600;
+            font-size: 13px;
+            font-weight: 500;
             font-family: inherit;
-            line-height: 1.2;
+            line-height: 1;
             white-space: nowrap;
-            transition: background 0.15s, color 0.15s;
+            transition: all 0.12s;
         }
-        .gh-ribbon-btn:hover { background: var(--bg-secondary); color: var(--text); }
-        .gh-ribbon-btn.active { background: var(--accent-light); color: var(--accent); }
+        .gh-ribbon-btn:hover { background: var(--bg-secondary); color: var(--text); border-color: var(--border); }
+        .gh-ribbon-btn:active { background: var(--bg-tertiary); }
+        .gh-ribbon-btn.active { background: var(--accent-light); color: var(--accent); border-color: var(--accent-light); }
         .gh-ribbon-btn.active .rlabel { color: var(--accent); }
-        .gh-ribbon-btn .ic { font-size: 20px; line-height: 1; }
-        .gh-ribbon-btn .rlabel { font-size: 11px; }
-        /* Carpeta sin elegir = ámbar (aviso); elegida = verde */
-        .gh-ribbon-btn.folder .ic { filter: none; }
-        .gh-ribbon-btn.folder .rlabel { color: var(--warning); }
+        .gh-ribbon-btn .ic { font-size: 16px; line-height: 1; }
+        .gh-ribbon-btn .rlabel { font-size: 13px; }
+        /* Carpeta elegida = verde */
         .gh-ribbon-btn.folder.connected .rlabel { color: var(--success); }
-        .gh-ribbon-sep { width: 1px; background: var(--border); margin: 6px 6px; flex-shrink: 0; }
+        .gh-ribbon-btn.folder.connected .ic { filter: none; }
+        .gh-ribbon-sep { width: 1px; align-self: stretch; background: var(--border); margin: 2px 6px; flex-shrink: 0; }
 
         /* ===== PLAYER (controles bajo el área de texto) ===== */
         .gh-player {
             display: flex;
-            align-items: stretch;
-            gap: 0;
-            padding: 10px 16px;
-            background: #2c2c2e;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: var(--bg-secondary);
             border: 1px solid var(--border);
             border-top: none;
             flex-wrap: wrap;
         }
-        /* Botones rectangulares estilo Walkman */
+        /* Botones claros con icono + palabra; hover de hundido */
         .gh-player-btn {
-            display: flex;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
-            min-width: 52px;
-            padding: 10px 14px;
-            border: 1px solid #4a4a4c;
-            background: #3a3a3c;
-            border-radius: 0;
+            padding: 8px 14px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            border-radius: var(--radius);
             cursor: pointer;
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 600;
             font-family: inherit;
-            color: #e8e8ea;
-            transition: background 0.12s;
-            margin-left: -1px;   /* bordes contiguos, como una botonera */
+            color: var(--text);
+            transition: all 0.1s;
+            box-shadow: 0 1px 0 rgba(31,35,40,0.04);
         }
-        .gh-player-btn:first-child { margin-left: 0; }
-        .gh-player-btn:hover { background: #4a4a4c; }
-        .gh-player-btn:active { background: #565658; }
+        .gh-player-btn:hover { background: var(--bg-secondary); border-color: var(--border-strong); }
+        /* Efecto de hundido al pulsar */
+        .gh-player-btn:active {
+            background: var(--bg-tertiary);
+            box-shadow: inset 0 2px 3px rgba(31,35,40,0.18);
+            transform: translateY(1px);
+        }
         .gh-player-btn .pic { font-size: 14px; line-height: 1; }
-        /* Botón principal Generar/Leer: verde tipo REC/PLAY */
+        /* Botón principal Leer: acento GitHub */
         .gh-player-btn.main {
             background: var(--accent);
             border-color: var(--accent);
             color: #fff;
-            font-weight: 700;
-            padding: 10px 20px;
         }
-        .gh-player-btn.main:hover { background: #0860ca; }
-        .gh-player-btn.rec {
-            background: var(--danger);
-            border-color: var(--danger);
+        .gh-player-btn.main:hover { background: #0860ca; border-color: #0860ca; }
+        .gh-player-btn.main:active {
+            background: #0550ae;
+            box-shadow: inset 0 2px 3px rgba(0,0,0,0.25);
+            transform: translateY(1px);
+        }
+        /* Generar Audio: verde éxito, en la esquina */
+        .gh-player-btn.generate {
+            background: var(--success);
+            border-color: var(--success);
             color: #fff;
-            font-weight: 700;
         }
-        .gh-player-btn.rec:hover { background: #a40e19; }
+        .gh-player-btn.generate:hover { background: #147a2e; border-color: #147a2e; }
+        .gh-player-btn.generate:active {
+            background: #106a28;
+            box-shadow: inset 0 2px 3px rgba(0,0,0,0.25);
+            transform: translateY(1px);
+        }
         .gh-player-spacer { flex: 1; min-width: 12px; }
         .gh-player-btn:disabled { opacity: 0.4; cursor: not-allowed; }
         .gh-htabs {
@@ -673,16 +684,17 @@
         <span class="rlabel">Inicio</span>
     </button>
     <div class="gh-ribbon-sep"></div>
-    <button class="gh-ribbon-btn" onclick="speakSelection()" title="Leer solo el texto seleccionado">
-        <span class="ic">🔊</span>
-        <span class="rlabel">Leer selección</span>
-    </button>
-    <button class="gh-ribbon-btn" onclick="exportAudio()" title="Exportar el texto como audio MP3">
-        <span class="ic">🎙️</span>
-        <span class="rlabel">Exportar MP3</span>
-    </button>
-    <button class="gh-ribbon-btn" id="ribbonAudios" onclick="switchView('audio')" title="Ver mis audios">
+    <button class="gh-ribbon-btn folder" id="ribbonFolder" onclick="selectFolder()" title="Elegir la carpeta donde se guardarán los audios">
         <span class="ic">📁</span>
+        <span class="rlabel">Seleccionar carpeta</span>
+    </button>
+    <button class="gh-ribbon-btn" onclick="clearText()" title="Limpiar el editor">
+        <span class="ic">🧹</span>
+        <span class="rlabel">Limpiar</span>
+    </button>
+    <div class="gh-ribbon-sep"></div>
+    <button class="gh-ribbon-btn" id="ribbonAudios" onclick="switchView('audio')" title="Ver mis audios">
+        <span class="ic">🎵</span>
         <span class="rlabel">Mis audios <span id="audioCount" style="font-weight:700">0</span></span>
     </button>
 </div>
@@ -714,30 +726,26 @@ Prueba escribiendo algo y presiona el botón ▶ para escucharlo.</textarea>
                     <span id="charInfo">0 caracteres | 0 palabras</span>
                 </div>
 
-                <!-- PLAYER: botonera estilo Walkman bajo el área de texto -->
+                <!-- PLAYER: controles con icono + palabra, estilo GitHub Light -->
                 <div class="gh-player">
-                    <button class="gh-player-btn" id="btnRewind" onclick="skipBack()" title="Retroceder 10 s">
-                        <span class="pic">⏪</span>
-                    </button>
                     <button class="gh-player-btn main" id="btnSpeak" onclick="speak()" title="Leer">
                         <span class="pic">▶</span> Leer
                     </button>
+                    <button class="gh-player-btn" id="btnRewind" onclick="skipBack()" title="Retroceder">
+                        <span class="pic">⏪</span> Atrás
+                    </button>
                     <button class="gh-player-btn" id="btnPause" onclick="togglePause()" title="Pausar">
-                        <span class="pic">⏸</span>
+                        <span class="pic">⏸</span> Pausa
                     </button>
                     <button class="gh-player-btn" id="btnStop" onclick="stop()" title="Detener">
-                        <span class="pic">⏹</span>
+                        <span class="pic">⏹</span> Detener
                     </button>
-                    <button class="gh-player-btn" id="btnForward" onclick="skipForward()" title="Avanzar 10 s">
-                        <span class="pic">⏩</span>
+                    <button class="gh-player-btn" id="btnForward" onclick="skipForward()" title="Avanzar">
+                        <span class="pic">⏩</span> Avanza
                     </button>
                     <div class="gh-player-spacer"></div>
-                    <button class="gh-player-btn rec" id="btnGenerate" onclick="exportAudio()" title="Generar y guardar el audio MP3">
+                    <button class="gh-player-btn generate" id="btnGenerate" onclick="exportAudio()" title="Generar y guardar el audio MP3">
                         <span class="pic">⏺</span> Generar Audio
-                    </button>
-                    <div class="gh-player-spacer"></div>
-                    <button class="gh-player-btn" onclick="clearText()" title="Limpiar el editor">
-                        <span class="pic">🗑</span>
                     </button>
                 </div>
             </div>
@@ -983,9 +991,19 @@ async function init() {
     updateCounts();
     switchView('editor');
 
+    // Restaurar la carpeta de audios elegida en sesiones anteriores
+    try {
+        const dir = await dbGetHandle('audioDir');
+        if (dir) {
+            audioSaveDir = dir;
+            const btn = $('ribbonFolder');
+            if (btn) { btn.classList.add('connected'); btn.querySelector('.rlabel').textContent = '📁 ' + dir.name; }
+        }
+    } catch (e) { console.warn('No se pudo restaurar la carpeta:', e); }
+
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
-    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v4.2. Todos los derechos reservados.`;
+    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v4.3. Todos los derechos reservados.`;
 }
 
 // ============ VOCES (solo Google es-ES / es-US) ============
@@ -1248,6 +1266,29 @@ function skipForward() {
     speechSynthesis.cancel();
     if (queueIndex >= speechQueue.length) { onSpeechFinished(); return; }
     speakNextChunk();
+}
+
+// Elegir la carpeta donde se guardarán los audios (como en Verbium).
+// No escribe directo (eso fallaba); solo fija dónde arranca el "Guardar como".
+async function selectFolder() {
+    if (!('showDirectoryPicker' in window)) {
+        showToast('Tu navegador no permite elegir carpeta. Usa Chrome/Edge de escritorio.', 'warning');
+        return;
+    }
+    try {
+        audioSaveDir = await window.showDirectoryPicker({ id: 'ttsAudio', mode: 'readwrite' });
+        try { await dbPutHandle('audioDir', audioSaveDir); } catch {}
+        const btn = $('ribbonFolder');
+        if (btn) {
+            btn.classList.add('connected');
+            btn.querySelector('.rlabel').textContent = '📁 ' + audioSaveDir.name;
+        }
+        showToast('Carpeta de audios: ' + audioSaveDir.name, 'success');
+    } catch (e) {
+        if (e.name === 'AbortError') return;
+        console.error(e);
+        showToast('No se pudo elegir la carpeta', 'warning');
+    }
 }
 
 // Guarda un blob en el disco. Usa "Guardar como" de Chrome (showSaveFilePicker)
