@@ -997,7 +997,7 @@ async function init() {
 
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
-    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium. Todos los derechos reservados.`;
+    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v3.9. Todos los derechos reservados.`;
 }
 
 // ============ VOCES (solo Google es-ES / es-US) ============
@@ -1256,7 +1256,20 @@ async function restoreFolders() {
     }
     try {
         const a = await dbGetHandle('audioDir');
-        if (a) { audioDirHandle = a; const h = $('audioFolderHint'); if (h) h.textContent = '📁 ' + a.name; $('ribbonAudioFolder')?.classList.add('connected'); }
+        if (a) {
+            audioDirHandle = a;
+            const h = $('audioFolderHint');
+            const btn = $('ribbonAudioFolder');
+            // ¿Sigue vigente el permiso tras recargar?
+            const perm = await a.queryPermission({ mode: 'readwrite' });
+            if (perm === 'granted') {
+                if (h) h.textContent = '📁 ' + a.name;
+                btn?.classList.add('connected');
+            } else {
+                // El permiso quedó suspendido: hay que reconfirmar con un clic
+                if (h) h.textContent = '📁 ' + a.name + ' — pulsa "Carpeta audio" para reactivar';
+            }
+        }
     } catch (e) { console.warn('No se pudieron restaurar carpetas:', e); }
 }
 
@@ -1274,7 +1287,13 @@ function folderUnavailableMsg() {
 async function pickAudioFolder() {
     if (!fsaSupported) { showToast(folderUnavailableMsg(), 'warning'); return; }
     try {
-        audioDirHandle = await window.showDirectoryPicker({ id: 'ttsAudio', mode: 'readwrite' });
+        const handle = await window.showDirectoryPicker({ id: 'ttsAudio', mode: 'readwrite' });
+        // Confirmar el permiso de escritura AHORA (no al guardar) para no molestar después
+        if (!(await ensurePermission(handle, 'readwrite'))) {
+            showToast('Permiso denegado para esa carpeta', 'warning');
+            return;
+        }
+        audioDirHandle = handle;
         await dbPutHandle('audioDir', audioDirHandle);
         $('audioFolderHint').textContent = '📁 ' + audioDirHandle.name;
         $('ribbonAudioFolder')?.classList.add('connected');
@@ -1511,13 +1530,21 @@ async function confirmExportAudio() {
                 console.error('No se pudo guardar en IndexedDB:', e);
             }
 
-            // Guardar en la carpeta elegida, o descargar como respaldo
+            // Guardar en la carpeta elegida
             let savedToFolder = false;
+            let folderError = false;
             if (audioDirHandle) {
-                try { savedToFolder = await writeToFolder(audioDirHandle, name, blob); }
-                catch (e) { console.error('No se pudo escribir en la carpeta de audios:', e); }
+                try {
+                    savedToFolder = await writeToFolder(audioDirHandle, name, blob);
+                    if (!savedToFolder) folderError = true;
+                } catch (e) {
+                    console.error('No se pudo escribir en la carpeta de audios:', e);
+                    folderError = true;
+                }
             }
-            if (!savedToFolder) {
+            // Solo se descarga como respaldo si NO hay carpeta elegida.
+            // Si hay carpeta pero falló, se avisa (no se descarga a otro lado a escondidas).
+            if (!savedToFolder && !audioDirHandle) {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url; a.download = name;
@@ -1530,8 +1557,17 @@ async function confirmExportAudio() {
             recordingStream = null;
             renderAudioList();
             updateCounts();
-            setStatus('✅ MP3 exportado');
-            showToast('MP3 exportado' + (savedToFolder ? ' en ' + audioDirHandle.name : '') + ': ' + name, 'success');
+
+            if (savedToFolder) {
+                setStatus('✅ MP3 guardado en ' + audioDirHandle.name);
+                showToast('MP3 guardado en 📁 ' + audioDirHandle.name + ': ' + name, 'success');
+            } else if (folderError) {
+                setStatus('⚠️ No se pudo guardar en la carpeta');
+                showToast('No se pudo guardar en la carpeta. Vuelve a elegirla en "Carpeta audio".', 'warning');
+            } else {
+                setStatus('✅ MP3 descargado');
+                showToast('MP3 descargado (elige una carpeta para guardarlo ahí): ' + name, 'success');
+            }
         };
 
         mediaRecorder.start();
