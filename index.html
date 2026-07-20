@@ -132,7 +132,91 @@
             border-radius: 100px;
         }
 
-        /* ===== HEADER TABS ===== */
+        /* ===== RIBBON (menú entre header y editor) ===== */
+        .gh-ribbon {
+            max-width: 1100px;
+            margin: 12px auto 0;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 8px 12px;
+            display: flex;
+            align-items: stretch;
+            gap: 4px;
+            box-shadow: var(--shadow-sm);
+            overflow-x: auto;
+        }
+        .gh-ribbon-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            min-width: 76px;
+            padding: 8px 12px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 600;
+            font-family: inherit;
+            line-height: 1.2;
+            white-space: nowrap;
+            transition: background 0.15s, color 0.15s;
+        }
+        .gh-ribbon-btn:hover { background: var(--bg-secondary); color: var(--text); }
+        .gh-ribbon-btn .ic { font-size: 20px; line-height: 1; }
+        .gh-ribbon-btn .rlabel { font-size: 11px; }
+        /* Carpeta sin elegir = ámbar (aviso); elegida = verde */
+        .gh-ribbon-btn.folder .ic { filter: none; }
+        .gh-ribbon-btn.folder .rlabel { color: var(--warning); }
+        .gh-ribbon-btn.folder.connected .rlabel { color: var(--success); }
+        .gh-ribbon-sep { width: 1px; background: var(--border); margin: 6px 6px; flex-shrink: 0; }
+
+        /* ===== PLAYER (controles bajo el área de texto) ===== */
+        .gh-player {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-top: none;
+            border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+            flex-wrap: wrap;
+        }
+        .gh-player-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 9px 16px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+            border-radius: 100px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            font-family: inherit;
+            color: var(--text);
+            transition: all 0.15s;
+        }
+        .gh-player-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .gh-player-btn .pic { font-size: 15px; }
+        /* Botón principal circular (Leer) */
+        .gh-player-btn.main {
+            background: var(--accent);
+            color: #fff;
+            border-color: var(--accent);
+            width: 46px; height: 46px;
+            padding: 0;
+            border-radius: 50%;
+            font-size: 18px;
+        }
+        .gh-player-btn.main:hover { background: #0860ca; color: #fff; }
+        .gh-player-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+        .gh-player-spacer { flex: 1; }
         .gh-htabs {
             display: flex;
             align-items: center;
@@ -570,7 +654,7 @@
     <div class="gh-header-left">
         <div class="gh-logo">🎙️</div>
         <div class="gh-title">Lectorium <span>/ español</span></div>
-        <span class="gh-badge">v3.3</span>
+        <span class="gh-badge">v3.5</span>
     </div>
     <nav class="gh-htabs">
         <button class="gh-htab active" data-view="editor" onclick="switchView('editor')">
@@ -585,6 +669,31 @@
     </nav>
 </header>
 
+<!-- ===== RIBBON ===== -->
+<div class="gh-ribbon" id="ribbon">
+    <button class="gh-ribbon-btn folder" id="ribbonAudioFolder" onclick="pickAudioFolder()" title="Elegir carpeta donde se guardan los audios">
+        <span class="ic">🎵</span>
+        <span class="rlabel">Carpeta audio</span>
+    </button>
+    <button class="gh-ribbon-btn folder" id="ribbonTextFolder" onclick="pickTextFolder()" title="Elegir carpeta de textos">
+        <span class="ic">📂</span>
+        <span class="rlabel">Carpeta texto</span>
+    </button>
+    <div class="gh-ribbon-sep"></div>
+    <button class="gh-ribbon-btn" onclick="exportAudio()" title="Exportar el texto como audio">
+        <span class="ic">🎙️</span>
+        <span class="rlabel">Exportar audio</span>
+    </button>
+    <button class="gh-ribbon-btn" onclick="downloadCurrentText()" title="Descargar el texto actual como .txt">
+        <span class="ic">📥</span>
+        <span class="rlabel">Descargar texto</span>
+    </button>
+    <button class="gh-ribbon-btn" onclick="loadFileInput.click()" title="Abrir un archivo .txt">
+        <span class="ic">📄</span>
+        <span class="rlabel">Abrir .txt</span>
+    </button>
+</div>
+
 <!-- ===== LAYOUT ===== -->
 <div class="gh-layout">
 
@@ -592,28 +701,7 @@
     <main class="gh-main" id="mainPanel">
         <!-- EDITOR VIEW -->
         <div id="view-editor">
-            <div class="gh-toolbar">
-                <button class="gh-btn gh-btn-primary" id="btnSpeak" onclick="speak()">
-                    ▶️ Leer
-                </button>
-                <button class="gh-btn" id="btnPause" onclick="togglePause()">
-                    ⏸️ Pausar
-                </button>
-                <button class="gh-btn gh-btn-danger" id="btnStop" onclick="stop()">
-                    ⏹️ Detener
-                </button>
-                <div class="gh-divider"></div>
-                <button class="gh-btn" onclick="saveText()">
-                    💾 Guardar
-                </button>
-                <button class="gh-btn" onclick="clearText()">
-                    🗑️ Limpiar
-                </button>
-                <button class="gh-btn" onclick="loadFileInput.click()">
-                    📂 Abrir .txt
-                </button>
-                <input type="file" id="loadFileInput" accept=".txt" style="display:none" onchange="openFile(this)">
-            </div>
+            <input type="file" id="loadFileInput" accept=".txt" style="display:none" onchange="openFile(this)">
 
             <div class="gh-editor">
                 <div class="gh-tabs" id="tabBar">
@@ -622,15 +710,15 @@
                     </button>
                 </div>
                 <div class="gh-textarea-wrap">
-                    <textarea class="gh-textarea" id="editor" placeholder="Escribe o pega aquí el texto en español..." spellcheck="false">Hola, bienvenido al lector de texto a voz.
+                    <textarea class="gh-textarea" id="editor" placeholder="Escribe o pega aquí el texto en español..." spellcheck="false">Hola, bienvenido a Lectorium.
 
 Este editor te permite:
 • Escribir y guardar textos en archivos .txt
-• Leer el texto con la voz del sistema
-• Exportar el audio como archivo MP3
+• Leer el texto con la voz de Google en español
+• Exportar el audio como archivo
 • Ajustar velocidad, tono y volumen
 
-Prueba escribiendo algo y presiona "Leer" para escucharlo en español.</textarea>
+Prueba escribiendo algo y presiona el botón ▶ para escucharlo.</textarea>
                 </div>
                 <div class="gh-statusbar">
                     <span><span class="dot" id="statusDot"></span><span id="statusMsg">Listo</span><span class="gh-visualizer" id="visualizer">
@@ -639,6 +727,24 @@ Prueba escribiendo algo y presiona "Leer" para escucharlo en español.</textarea
                         <span class="gh-vbar"></span><span class="gh-vbar"></span><span class="gh-vbar"></span>
                     </span></span>
                     <span id="charInfo">0 caracteres | 0 palabras</span>
+                </div>
+
+                <!-- PLAYER: controles tipo reproductor bajo el área de texto -->
+                <div class="gh-player">
+                    <button class="gh-player-btn main" id="btnSpeak" onclick="speak()" title="Leer">▶️</button>
+                    <button class="gh-player-btn" id="btnPause" onclick="togglePause()" title="Pausar">
+                        <span class="pic">⏸️</span> Pausar
+                    </button>
+                    <button class="gh-player-btn danger" id="btnStop" onclick="stop()" title="Detener">
+                        <span class="pic">⏹️</span> Detener
+                    </button>
+                    <div class="gh-player-spacer"></div>
+                    <button class="gh-player-btn" onclick="clearText()" title="Limpiar el editor">
+                        <span class="pic">🗑️</span> Limpiar
+                    </button>
+                    <button class="gh-player-btn" onclick="saveText()" title="Guardar texto">
+                        <span class="pic">💾</span> Guardar
+                    </button>
                 </div>
             </div>
         </div>
@@ -727,9 +833,7 @@ Prueba escribiendo algo y presiona "Leer" para escucharlo en español.</textarea
         <div class="gh-panel">
             <div class="gh-panel-header">⚡ Acciones</div>
             <div class="gh-panel-body">
-                <button class="gh-btn gh-btn-accent" style="width:100%;margin-bottom:8px" onclick="exportAudio()">🎵 Exportar Audio</button>
                 <button class="gh-btn" style="width:100%;margin-bottom:8px" onclick="speakSelection()">🔊 Leer selección</button>
-                <button class="gh-btn" style="width:100%;margin-bottom:8px" onclick="downloadCurrentText()">📥 Descargar texto actual</button>
                 <button class="gh-btn" style="width:100%" onclick="insertSample()">📋 Insertar texto de ejemplo</button>
             </div>
         </div>
@@ -741,7 +845,7 @@ Prueba escribiendo algo y presiona "Leer" para escucharlo en español.</textarea
 <footer class="gh-footer">
     <span class="gh-foot-name">🎙️ Lectorium</span>
     <span id="footerCopyright"></span>
-    <span class="gh-foot-ver">v3.3</span>
+    <span class="gh-foot-ver">v3.5</span>
 </footer>
 
 <!-- ===== SAVE TEXT MODAL ===== -->
@@ -804,11 +908,10 @@ const DEFAULTS = { rate: 1, pitch: 1, volume: 1 };
 // Handles de carpetas (File System Access API). Se recuerdan en IndexedDB.
 let audioDirHandle = null;
 let textDirHandle = null;
-// La API existe, pero además NO funciona dentro de un iframe de otro origen
-// (p. ej. una vista previa embebida). Solo funciona con la página en su propia pestaña.
-let inCrossOriginFrame = false;
-try { inCrossOriginFrame = (window.self !== window.top); } catch (e) { inCrossOriginFrame = true; }
-const fsaSupported = ('showDirectoryPicker' in window) && !inCrossOriginFrame;
+// Igual que Verbium: solo comprobamos si el navegador tiene la función.
+// (No bloqueamos por iframe; si el navegador la ofrece, se intenta y si Chrome
+//  la rechaza por contexto, se captura el error con un mensaje claro.)
+const fsaSupported = ('showDirectoryPicker' in window);
 
 function loadJSON(key) {
     try { return JSON.parse(localStorage.getItem(key) || '[]'); }
@@ -1055,8 +1158,9 @@ function startSpeech(text) {
     queueIndex = 0;
     isSpeaking = true;
     isPaused = false;
-    btnSpeak.innerHTML = '🔁 Repetir';
-    btnPause.innerHTML = '⏸️ Pausar';
+    btnSpeak.innerHTML = '🔁';
+    btnSpeak.title = 'Repetir';
+    btnPause.innerHTML = '<span class="pic">⏸️</span> Pausar';
     startKeepAlive();
     speakNextChunk();
 }
@@ -1145,8 +1249,9 @@ function finishSpeechState() {
     speechQueue = [];
     queueIndex = 0;
     stopKeepAlive();
-    btnSpeak.innerHTML = '▶️ Leer';
-    btnPause.innerHTML = '⏸️ Pausar';
+    btnSpeak.innerHTML = '▶️';
+    btnSpeak.title = 'Leer';
+    btnPause.innerHTML = '<span class="pic">⏸️</span> Pausar';
 }
 
 function togglePause() {
@@ -1154,12 +1259,12 @@ function togglePause() {
     if (isPaused) {
         isPaused = false;
         speechSynthesis.resume();
-        btnPause.innerHTML = '⏸️ Pausar';
+        btnPause.innerHTML = '<span class="pic">⏸️</span> Pausar';
         setStatus('🔊 Leyendo...', 'speaking');
     } else {
         isPaused = true;
         speechSynthesis.pause();
-        btnPause.innerHTML = '▶️ Reanudar';
+        btnPause.innerHTML = '<span class="pic">▶️</span> Reanudar';
         setStatus('⏸️ Pausado', 'paused');
     }
 }
@@ -1174,18 +1279,16 @@ function stop() {
 // ============ CARPETAS (File System Access API) ============
 async function restoreFolders() {
     if (!fsaSupported) {
-        const motivo = inCrossOriginFrame
-            ? 'Abre la página en su propia pestaña para usar carpetas'
-            : 'No compatible en este navegador (usa descargas)';
+        const motivo = 'Tu navegador no permite carpetas (usa Chrome/Edge de escritorio)';
         $('audioFolderHint').textContent = motivo;
         $('textFolderHint').textContent = motivo;
         return;
     }
     try {
         const a = await dbGetHandle('audioDir');
-        if (a) { audioDirHandle = a; $('audioFolderHint').textContent = '📁 ' + a.name; }
+        if (a) { audioDirHandle = a; $('audioFolderHint').textContent = '📁 ' + a.name; $('ribbonAudioFolder')?.classList.add('connected'); }
         const t = await dbGetHandle('textDir');
-        if (t) { textDirHandle = t; $('textFolderHint').textContent = '📁 ' + t.name; }
+        if (t) { textDirHandle = t; $('textFolderHint').textContent = '📁 ' + t.name; $('ribbonTextFolder')?.classList.add('connected'); }
     } catch (e) { console.warn('No se pudieron restaurar carpetas:', e); }
 }
 
@@ -1197,9 +1300,7 @@ async function ensurePermission(handle, mode) {
 }
 
 function folderUnavailableMsg() {
-    return inCrossOriginFrame
-        ? 'Las carpetas solo funcionan con la página abierta en su propia pestaña (no en vista previa). Publícala o ábrela directamente en Chrome.'
-        : 'Tu navegador no permite elegir carpetas. Se usarán descargas.';
+    return 'Tu navegador no permite elegir carpetas. Abre Lectorium en Chrome o Edge de escritorio.';
 }
 
 async function pickAudioFolder() {
@@ -1208,6 +1309,7 @@ async function pickAudioFolder() {
         audioDirHandle = await window.showDirectoryPicker({ id: 'ttsAudio', mode: 'readwrite' });
         await dbPutHandle('audioDir', audioDirHandle);
         $('audioFolderHint').textContent = '📁 ' + audioDirHandle.name;
+        $('ribbonAudioFolder')?.classList.add('connected');
         showToast('Carpeta de audios: ' + audioDirHandle.name, 'success');
     } catch (e) {
         if (e.name === 'AbortError') return;
@@ -1222,6 +1324,7 @@ async function pickTextFolder() {
         textDirHandle = await window.showDirectoryPicker({ id: 'ttsText', mode: 'readwrite' });
         await dbPutHandle('textDir', textDirHandle);
         $('textFolderHint').textContent = '📁 ' + textDirHandle.name;
+        $('ribbonTextFolder')?.classList.add('connected');
         showToast('Carpeta de textos: ' + textDirHandle.name, 'success');
     } catch (e) {
         if (e.name === 'AbortError') return;
