@@ -670,6 +670,57 @@
 </head>
 <body>
 
+<!-- ===== PANTALLA DE PIN (portero privado) ===== -->
+<div id="pinLock" style="position:fixed;inset:0;z-index:9999;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center">
+    <div style="background:var(--bg);border:1px solid var(--border);border-top:3px solid var(--accent);padding:32px 28px;max-width:340px;width:90%;text-align:center">
+        <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:1.8rem;font-weight:500;letter-spacing:.28em;text-transform:uppercase;margin-bottom:6px">L<span style="color:var(--accent)">ector</span>ium</div>
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:20px">Sitio privado — introduce tu PIN</div>
+        <input type="password" id="pinInput" inputmode="numeric" maxlength="6" autocomplete="off"
+            placeholder="••••••"
+            style="width:100%;text-align:center;letter-spacing:.5em;font-size:22px;padding:12px;border:1px solid var(--border);border-radius:3px;font-family:var(--font-mono)">
+        <div id="pinError" style="font-size:12px;color:var(--danger);min-height:18px;margin-top:8px"></div>
+        <button onclick="checkPin()" style="width:100%;margin-top:8px;padding:11px;background:var(--accent);color:#fff;border:1px solid var(--accent);border-radius:3px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer">Entrar</button>
+    </div>
+</div>
+<script>
+    // PIN de portero: se compara por hash (el número no está escrito en el código)
+    const PIN_HASH = 'deb33bfe77470953f5e77daa7062ba8217525faa1494b3ff9911506ce1d03714';
+    const PIN_SALT = 'lectorium-salt-';
+
+    async function hashPin(pin) {
+        const data = new TextEncoder().encode(PIN_SALT + pin);
+        const buf = await crypto.subtle.digest('SHA-256', data);
+        return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function checkPin() {
+        const val = document.getElementById('pinInput').value.trim();
+        if (!val) { document.getElementById('pinError').textContent = 'Escribe tu PIN'; return; }
+        const h = await hashPin(val);
+        if (h === PIN_HASH) {
+            sessionStorage.setItem('lectorium_unlocked', '1');
+            document.getElementById('pinLock').style.display = 'none';
+        } else {
+            document.getElementById('pinError').textContent = 'PIN incorrecto';
+            document.getElementById('pinInput').value = '';
+            document.getElementById('pinInput').focus();
+        }
+    }
+
+    // Si ya se desbloqueó en esta sesión, no volver a pedir
+    if (sessionStorage.getItem('lectorium_unlocked') === '1') {
+        document.getElementById('pinLock').style.display = 'none';
+    } else {
+        window.addEventListener('load', () => {
+            const inp = document.getElementById('pinInput');
+            if (inp) {
+                inp.focus();
+                inp.addEventListener('keydown', e => { if (e.key === 'Enter') checkPin(); });
+            }
+        });
+    }
+</script>
+
 <!-- ===== HEADER ===== -->
 <header class="gh-header">
     <div class="gh-header-left">
@@ -976,7 +1027,7 @@ async function init() {
 
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
-    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v5.0. Todos los derechos reservados.`;
+    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v5.2. Todos los derechos reservados.`;
 }
 
 // ============ GOOGLE CLOUD TTS (voces WaveNet + MP3) ============
@@ -1017,9 +1068,9 @@ async function verifyGcloud() {
             throw new Error(err.error?.message || `Error ${resp.status}`);
         }
         const data = await resp.json();
-        // Nos quedamos con voces WaveNet y Neural2 en español (mejor calidad)
+        // Nos quedamos con voces Standard, WaveNet y Neural2 en español
         gcloudVoices = (data.voices || [])
-            .filter(v => /Wavenet|Neural2/i.test(v.name))
+            .filter(v => /Standard|Wavenet|Neural2/i.test(v.name))
             .filter(v => (v.languageCodes || []).some(l => l.toLowerCase().startsWith('es')))
             .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -1030,7 +1081,10 @@ async function verifyGcloud() {
                 .sort((a, b) => a.name.localeCompare(b.name));
         }
 
-        $('gcloudStatus').textContent = `✅ Conectado. ${gcloudVoices.length} voces de alta calidad disponibles.`;
+        const nWave = gcloudVoices.filter(v => /Wavenet/i.test(v.name)).length;
+        const nNeural = gcloudVoices.filter(v => /Neural2/i.test(v.name)).length;
+        const nStd = gcloudVoices.filter(v => /Standard/i.test(v.name)).length;
+        $('gcloudStatus').innerHTML = `✅ <b>Conectado.</b><br>${nWave} WaveNet · ${nNeural} Neural2 · ${nStd} Standard`;
         $('gcloudStatus').style.color = 'var(--success)';
         $('btnGenerate').style.display = 'inline-flex';
         populateVoices();   // añade las voces cloud al menú
@@ -1192,23 +1246,39 @@ function populateVoices() {
     const previous = voiceSelect.value;
     voiceSelect.innerHTML = '';
 
-    // Primero, las voces de Google Cloud (alta calidad) si hay clave
+    // Primero, las voces de Google Cloud, separadas por tipo con su precio
     if (gcloudVoices.length > 0) {
-        const grp = document.createElement('optgroup');
-        grp.label = '☁️ Google Cloud (alta calidad + MP3)';
-        gcloudVoices.forEach(v => {
-            const opt = document.createElement('option');
-            opt.value = 'cloud:' + v.name;
+        const waveNet  = gcloudVoices.filter(v => /Wavenet/i.test(v.name));
+        const neural2  = gcloudVoices.filter(v => /Neural2/i.test(v.name));
+        const standard = gcloudVoices.filter(v => /Standard/i.test(v.name));
+        const otras    = gcloudVoices.filter(v => !/Wavenet|Neural2|Standard/i.test(v.name));
+
+        const etiquetaVoz = (v) => {
             const lang = (v.languageCodes || [])[0] || '';
             const pais = lang.toLowerCase().includes('us') ? '🇺🇸' :
                          lang.toLowerCase().includes('mx') ? '🇲🇽' : '🇪🇸';
-            const tipo = /Neural2/i.test(v.name) ? 'Neural2' : 'WaveNet';
             const letra = v.name.split('-').pop();
             const genero = v.ssmlGender === 'FEMALE' ? 'mujer' : v.ssmlGender === 'MALE' ? 'hombre' : '';
-            opt.textContent = `${pais} ${tipo} ${letra}${genero ? ' (' + genero + ')' : ''}`;
-            grp.appendChild(opt);
-        });
-        voiceSelect.appendChild(grp);
+            return `${pais} Voz ${letra}${genero ? ' (' + genero + ')' : ''}`;
+        };
+        const agregarGrupo = (label, arr) => {
+            if (arr.length === 0) return;
+            const grp = document.createElement('optgroup');
+            grp.label = label;
+            arr.forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = 'cloud:' + v.name;
+                opt.textContent = etiquetaVoz(v);
+                grp.appendChild(opt);
+            });
+            voiceSelect.appendChild(grp);
+        };
+
+        // De más económico a premium
+        agregarGrupo('☁️ Standard — MP3 · 4M gratis/mes', standard);
+        agregarGrupo('☁️ WaveNet — MP3 · 1M gratis ($4/M)', waveNet);
+        agregarGrupo('☁️ Neural2 — MP3 · 1M gratis ($16/M)', neural2);
+        agregarGrupo('☁️ Otras voces Cloud — MP3', otras);
     }
 
     // Luego, las voces del navegador
