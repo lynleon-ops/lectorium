@@ -664,11 +664,6 @@
         <span class="rlabel">Inicio</span>
     </button>
     <div class="gh-ribbon-sep"></div>
-    <button class="gh-ribbon-btn folder" id="ribbonAudioFolder" onclick="pickAudioFolder()" title="Elegir carpeta donde se guardan los audios MP3">
-        <span class="ic">🎵</span>
-        <span class="rlabel">Carpeta audio</span>
-    </button>
-    <div class="gh-ribbon-sep"></div>
     <button class="gh-ribbon-btn" onclick="speakSelection()" title="Leer solo el texto seleccionado">
         <span class="ic">🔊</span>
         <span class="rlabel">Leer selección</span>
@@ -777,15 +772,6 @@ Prueba escribiendo algo y presiona el botón ▶ para escucharlo.</textarea>
                 </div>
             </div>
         </div>
-
-        <!-- Folder -->
-        <div class="gh-panel">
-            <div class="gh-panel-header">📁 Carpeta de audios</div>
-            <div class="gh-panel-body">
-                <button class="gh-btn" style="width:100%" onclick="pickAudioFolder()">🎵 Elegir carpeta de audios</button>
-                <div id="audioFolderHint" style="font-size:11px;color:var(--text-muted);margin-top:4px">Ninguna seleccionada</div>
-            </div>
-        </div>
     </aside>
 
 </div>
@@ -858,7 +844,7 @@ let currentAudioUrl = null;
 const DEFAULTS = { rate: 1, pitch: 1, volume: 1 };
 
 // Handles de carpetas (File System Access API). Se recuerdan en IndexedDB.
-let audioDirHandle = null;
+let audioSaveDir = null;   // última carpeta usada al guardar (para arrancar ahí la próxima vez)
 // Igual que Verbium: solo comprobamos si el navegador tiene la función.
 // (No bloqueamos por iframe; si el navegador la ofrece, se intenta y si Chrome
 //  la rechaza por contexto, se captura el error con un mensaje claro.)
@@ -992,12 +978,11 @@ async function init() {
     }
     renderAudioList();
     updateCounts();
-    restoreFolders();
     switchView('editor');
 
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
-    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v3.9. Todos los derechos reservados.`;
+    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v4.1. Todos los derechos reservados.`;
 }
 
 // ============ VOCES (solo Google es-ES / es-US) ============
@@ -1247,73 +1232,43 @@ function stop() {
     if (isRecording) stopRecording();
 }
 
-// ============ CARPETAS (File System Access API) ============
-async function restoreFolders() {
-    if (!fsaSupported) {
-        const motivo = 'Tu navegador no permite carpetas (usa Chrome/Edge de escritorio)';
-        const h = $('audioFolderHint'); if (h) h.textContent = motivo;
-        return;
-    }
-    try {
-        const a = await dbGetHandle('audioDir');
-        if (a) {
-            audioDirHandle = a;
-            const h = $('audioFolderHint');
-            const btn = $('ribbonAudioFolder');
-            // ¿Sigue vigente el permiso tras recargar?
-            const perm = await a.queryPermission({ mode: 'readwrite' });
-            if (perm === 'granted') {
-                if (h) h.textContent = '📁 ' + a.name;
-                btn?.classList.add('connected');
-            } else {
-                // El permiso quedó suspendido: hay que reconfirmar con un clic
-                if (h) h.textContent = '📁 ' + a.name + ' — pulsa "Carpeta audio" para reactivar';
-            }
-        }
-    } catch (e) { console.warn('No se pudieron restaurar carpetas:', e); }
-}
-
-async function ensurePermission(handle, mode) {
-    const opts = { mode };
-    if ((await handle.queryPermission(opts)) === 'granted') return true;
-    if ((await handle.requestPermission(opts)) === 'granted') return true;
-    return false;
-}
-
-function folderUnavailableMsg() {
-    return 'Tu navegador no permite elegir carpetas. Abre Lectorium en Chrome o Edge de escritorio.';
-}
-
-async function pickAudioFolder() {
-    if (!fsaSupported) { showToast(folderUnavailableMsg(), 'warning'); return; }
-    try {
-        const handle = await window.showDirectoryPicker({ id: 'ttsAudio', mode: 'readwrite' });
-        // Confirmar el permiso de escritura AHORA (no al guardar) para no molestar después
-        if (!(await ensurePermission(handle, 'readwrite'))) {
-            showToast('Permiso denegado para esa carpeta', 'warning');
+// Guarda un blob en el disco. Usa "Guardar como" de Chrome (showSaveFilePicker)
+// que es el método más confiable: el propio navegador maneja el guardado.
+// Recuerda la última carpeta usada para que la próxima vez ya esté ahí.
+async function saveBlobToDisk(blob, filename, ext) {
+    const mime = ext === '.mp3' ? 'audio/mpeg' : 'audio/webm';
+    if ('showSaveFilePicker' in window) {
+        try {
+            const opts = {
+                suggestedName: filename,
+                types: [{
+                    description: ext === '.mp3' ? 'Audio MP3' : 'Audio WebM',
+                    accept: { [mime]: [ext] }
+                }]
+            };
+            if (audioSaveDir) opts.startIn = audioSaveDir;   // arranca en la última carpeta
+            const handle = await window.showSaveFilePicker(opts);
+            const writable = await handle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+            // Recordar la carpeta padre para la próxima vez
+            try { audioSaveDir = await handle.getParent?.() || audioSaveDir; } catch {}
+            setStatus('✅ MP3 guardado');
+            showToast('✅ Guardado: ' + handle.name, 'success');
             return;
+        } catch (e) {
+            if (e.name === 'AbortError') { showToast('Guardado cancelado', 'warning'); return; }
+            console.error('showSaveFilePicker falló, uso descarga:', e);
         }
-        audioDirHandle = handle;
-        await dbPutHandle('audioDir', audioDirHandle);
-        $('audioFolderHint').textContent = '📁 ' + audioDirHandle.name;
-        $('ribbonAudioFolder')?.classList.add('connected');
-        showToast('Carpeta de audios: ' + audioDirHandle.name, 'success');
-    } catch (e) {
-        if (e.name === 'AbortError') return;
-        if (e.name === 'SecurityError') { showToast(folderUnavailableMsg(), 'warning'); return; }
-        console.error(e); showToast('No se pudo elegir la carpeta', 'error');
     }
-}
-
-// Escribe un blob/texto en la carpeta indicada. Devuelve true si lo logró.
-async function writeToFolder(dirHandle, filename, data) {
-    if (!dirHandle) return false;
-    if (!(await ensurePermission(dirHandle, 'readwrite'))) return false;
-    const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
-    const writable = await fileHandle.createWritable();
-    await writable.write(data);
-    await writable.close();
-    return true;
+    // Respaldo: descarga normal (va a la carpeta de Descargas del navegador)
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setStatus('✅ MP3 descargado');
+    showToast('✅ Descargado: ' + filename, 'success');
 }
 
 // ============ GUARDAR TEXTO ============
@@ -1411,12 +1366,7 @@ function exportAudio() {
     if (!text) { showToast('Escribe algo primero', 'warning'); return; }
     $('audioFilename').value = currentFilename.replace(/\.txt$/, '') + '.mp3';
     const info = $('audioModalInfo');
-    const pasos = 'Al pulsar, Chrome te pedirá compartir: elige la pestaña <b>"Lectorium"</b> (ya viene marcada), deja encendido <b>"Compartir también el audio"</b> y pulsa <b>Compartir</b>. Es la forma de capturar la voz de Google. El audio se convertirá a <b>MP3</b> automáticamente.';
-    if (audioDirHandle) {
-        info.innerHTML = pasos + `<br><br>El MP3 se guardará en tu carpeta <b>${escapeHtml(audioDirHandle.name)}</b>.`;
-    } else {
-        info.innerHTML = pasos + '<br><br>Se descargará el MP3 (elige una carpeta de audios para guardarlo ahí automáticamente).';
-    }
+    info.innerHTML = 'Al pulsar, Chrome te pedirá compartir: elige la pestaña <b>"Lectorium"</b> (ya viene marcada), deja encendido <b>"Compartir también el audio"</b> y pulsa <b>Compartir</b>. Es la forma de capturar la voz de Google.<br><br>Cuando termine, Chrome abrirá <b>"Guardar como"</b> para que elijas tú mismo la carpeta donde guardar el MP3.';
     openModal('audioModal');
     $('audioFilename').focus();
 }
@@ -1502,21 +1452,24 @@ async function confirmExportAudio() {
 
             // Convertir a MP3 real
             let blob = webmBlob;
+            let ext = '.mp3';
             setStatus('⏳ Convirtiendo a MP3...', 'recording');
             try {
                 if (typeof lamejs !== 'undefined') {
                     blob = await convertToMp3(webmBlob);
                 } else {
-                    name = name.replace(/\.mp3$/i, '.webm');
+                    ext = '.webm';
                     showToast('No se cargó el conversor MP3; se guarda como WebM', 'warning');
                 }
             } catch (e) {
                 console.error('Conversión MP3 falló:', e);
                 blob = webmBlob;
-                name = name.replace(/\.mp3$/i, '.webm');
+                ext = '.webm';
                 showToast('No se pudo convertir a MP3; se guarda como WebM', 'warning');
             }
+            name = name.replace(/\.(mp3|webm|wav|ogg)$/i, '') + ext;
 
+            // Registrar en la lista "Mis audios" (IndexedDB) antes de guardar
             const item = {
                 id: Date.now(),
                 name,
@@ -1530,44 +1483,15 @@ async function confirmExportAudio() {
                 console.error('No se pudo guardar en IndexedDB:', e);
             }
 
-            // Guardar en la carpeta elegida
-            let savedToFolder = false;
-            let folderError = false;
-            if (audioDirHandle) {
-                try {
-                    savedToFolder = await writeToFolder(audioDirHandle, name, blob);
-                    if (!savedToFolder) folderError = true;
-                } catch (e) {
-                    console.error('No se pudo escribir en la carpeta de audios:', e);
-                    folderError = true;
-                }
-            }
-            // Solo se descarga como respaldo si NO hay carpeta elegida.
-            // Si hay carpeta pero falló, se avisa (no se descarga a otro lado a escondidas).
-            if (!savedToFolder && !audioDirHandle) {
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url; a.download = name;
-                document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            }
-
             isRecording = false;
             recordingStream?.getTracks().forEach(t => t.stop());
             recordingStream = null;
             renderAudioList();
             updateCounts();
+            setStatus('Listo');
 
-            if (savedToFolder) {
-                setStatus('✅ MP3 guardado en ' + audioDirHandle.name);
-                showToast('MP3 guardado en 📁 ' + audioDirHandle.name + ': ' + name, 'success');
-            } else if (folderError) {
-                setStatus('⚠️ No se pudo guardar en la carpeta');
-                showToast('No se pudo guardar en la carpeta. Vuelve a elegirla en "Carpeta audio".', 'warning');
-            } else {
-                setStatus('✅ MP3 descargado');
-                showToast('MP3 descargado (elige una carpeta para guardarlo ahí): ' + name, 'success');
-            }
+            // Guardar el archivo: Chrome abre su propia ventana "Guardar como"
+            await saveBlobToDisk(blob, name, ext);
         };
 
         mediaRecorder.start();
@@ -1729,7 +1653,9 @@ function showToast(msg, type) {
     toast.className = 'gh-toast ' + type;
     toast.classList.add('show');
     clearTimeout(toastTimeout);
-    toastTimeout = setTimeout(() => toast.classList.remove('show'), 3000);
+    // Los errores duran más para poder leerlos
+    const dur = type === 'error' ? 8000 : 3000;
+    toastTimeout = setTimeout(() => toast.classList.remove('show'), dur);
 }
 
 // ============ TECLADO ============
