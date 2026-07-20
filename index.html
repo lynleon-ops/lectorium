@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lectorium — Lector en español</title>
     <style>
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap');
+
         /* ===== GITHUB LIGHT THEME ===== */
         :root {
             --bg: #ffffff;
@@ -71,11 +73,15 @@
             font-size: 16px;
         }
         .gh-title {
-            font-size: 20px;
-            font-weight: 600;
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-size: 1.9rem;
+            font-weight: 500;
+            letter-spacing: .32em;
+            text-transform: uppercase;
             color: var(--text);
+            line-height: 1;
         }
-        .gh-title span { color: var(--text-muted); font-weight: 400; }
+        .gh-title span { color: var(--accent); font-weight: 500; }
         .gh-badge {
             background: var(--accent-light);
             color: var(--accent);
@@ -89,8 +95,8 @@
         /* ===== MAIN LAYOUT ===== */
         .gh-layout {
             max-width: 1100px;
-            margin: 0 auto;
-            padding: 12px 16px;
+            margin: 8px auto;
+            padding: 0;
             display: grid;
             grid-template-columns: minmax(0, 1fr) 300px;
             gap: 16px;
@@ -645,45 +651,28 @@
 <!-- ===== HEADER ===== -->
 <header class="gh-header">
     <div class="gh-header-left">
-        <div class="gh-logo">🎙️</div>
-        <div class="gh-title">Lectorium <span>/ español</span></div>
-        <span class="gh-badge">v3.6</span>
+        <div class="gh-title">L<span>ector</span>ium</div>
     </div>
-    <nav class="gh-htabs">
-        <button class="gh-htab active" data-view="editor" onclick="switchView('editor')">
-            📝 Editor
-        </button>
-        <button class="gh-htab" data-view="files" onclick="switchView('files')">
-            📁 Mis Textos <span class="count" id="fileCount">0</span>
-        </button>
-        <button class="gh-htab" data-view="audio" onclick="switchView('audio')">
-            🎵 Audios <span class="count" id="audioCount">0</span>
-        </button>
-    </nav>
 </header>
 
 <!-- ===== RIBBON ===== -->
 <div class="gh-ribbon" id="ribbon">
-    <button class="gh-ribbon-btn folder" id="ribbonAudioFolder" onclick="pickAudioFolder()" title="Elegir carpeta donde se guardan los audios">
+    <button class="gh-ribbon-btn folder" id="ribbonAudioFolder" onclick="pickAudioFolder()" title="Elegir carpeta donde se guardan los audios MP3">
         <span class="ic">🎵</span>
         <span class="rlabel">Carpeta audio</span>
     </button>
-    <button class="gh-ribbon-btn folder" id="ribbonTextFolder" onclick="pickTextFolder()" title="Elegir carpeta de textos">
-        <span class="ic">📂</span>
-        <span class="rlabel">Carpeta texto</span>
-    </button>
     <div class="gh-ribbon-sep"></div>
-    <button class="gh-ribbon-btn" onclick="exportAudio()" title="Exportar el texto como audio">
+    <button class="gh-ribbon-btn" onclick="exportAudio()" title="Exportar el texto como audio MP3">
         <span class="ic">🎙️</span>
-        <span class="rlabel">Exportar audio</span>
+        <span class="rlabel">Exportar MP3</span>
     </button>
-    <button class="gh-ribbon-btn" onclick="downloadCurrentText()" title="Descargar el texto actual como .txt">
-        <span class="ic">📥</span>
-        <span class="rlabel">Descargar texto</span>
+    <button class="gh-ribbon-btn" id="ribbonAudios" onclick="switchView('audio')" title="Ver mis audios">
+        <span class="ic">📁</span>
+        <span class="rlabel">Mis audios <span id="audioCount" style="font-weight:700">0</span></span>
     </button>
-    <button class="gh-ribbon-btn" onclick="loadFileInput.click()" title="Abrir un archivo .txt">
-        <span class="ic">📄</span>
-        <span class="rlabel">Abrir .txt</span>
+    <button class="gh-ribbon-btn" id="ribbonEditor" onclick="switchView('editor')" title="Volver al editor" style="display:none">
+        <span class="ic">📝</span>
+        <span class="rlabel">Editor</span>
     </button>
 </div>
 
@@ -694,21 +683,13 @@
     <main class="gh-main" id="mainPanel">
         <!-- EDITOR VIEW -->
         <div id="view-editor">
-            <input type="file" id="loadFileInput" accept=".txt" style="display:none" onchange="openFile(this)">
-
             <div class="gh-editor">
-                <div class="gh-tabs" id="tabBar">
-                    <button class="gh-tab active" id="tab-untitled">
-                        sin_titulo.txt
-                    </button>
-                </div>
                 <div class="gh-textarea-wrap">
                     <textarea class="gh-textarea" id="editor" placeholder="Escribe o pega aquí el texto en español..." spellcheck="false">Hola, bienvenido a Lectorium.
 
 Este editor te permite:
-• Escribir y guardar textos en archivos .txt
 • Leer el texto con la voz de Google en español
-• Exportar el audio como archivo
+• Exportar el audio como archivo MP3
 • Ajustar velocidad, tono y volumen
 
 Prueba escribiendo algo y presiona el botón ▶ para escucharlo.</textarea>
@@ -735,29 +716,14 @@ Prueba escribiendo algo y presiona el botón ▶ para escucharlo.</textarea>
                     <button class="gh-player-btn" onclick="clearText()" title="Limpiar el editor">
                         <span class="pic">🗑️</span> Limpiar
                     </button>
-                    <button class="gh-player-btn" onclick="saveText()" title="Guardar texto">
-                        <span class="pic">💾</span> Guardar
-                    </button>
                 </div>
-            </div>
-        </div>
-
-        <!-- FILES VIEW -->
-        <div id="view-files" style="display:none">
-            <div class="gh-toolbar">
-                <button class="gh-btn gh-btn-primary" onclick="saveText()">➕ Nuevo Texto</button>
-                <button class="gh-btn" onclick="loadFromTextFolder()">📂 Leer de carpeta</button>
-                <button class="gh-btn" onclick="exportAllTexts()">📦 Exportar Todo</button>
-            </div>
-            <div class="gh-panel-body">
-                <div class="gh-file-list" id="fileList"></div>
             </div>
         </div>
 
         <!-- AUDIO VIEW -->
         <div id="view-audio" style="display:none">
             <div class="gh-toolbar">
-                <button class="gh-btn gh-btn-primary" onclick="exportAudio()">➕ Nuevo Audio</button>
+                <button class="gh-btn gh-btn-primary" onclick="exportAudio()">➕ Nuevo MP3</button>
                 <button class="gh-btn gh-btn-danger" onclick="clearAllAudio()">🗑️ Borrar Todo</button>
             </div>
             <div class="gh-panel-body">
@@ -805,20 +771,12 @@ Prueba escribiendo algo y presiona el botón ▶ para escucharlo.</textarea>
             </div>
         </div>
 
-        <!-- Folders -->
+        <!-- Folder -->
         <div class="gh-panel">
-            <div class="gh-panel-header">📁 Carpetas</div>
+            <div class="gh-panel-header">📁 Carpeta de audios</div>
             <div class="gh-panel-body">
-                <div class="gh-control">
-                    <label>Carpeta de audios</label>
-                    <button class="gh-btn" style="width:100%" onclick="pickAudioFolder()">🎵 Elegir carpeta de audios</button>
-                    <div id="audioFolderHint" style="font-size:11px;color:var(--text-muted);margin-top:4px">Ninguna seleccionada</div>
-                </div>
-                <div class="gh-control">
-                    <label>Carpeta de textos</label>
-                    <button class="gh-btn" style="width:100%" onclick="pickTextFolder()">📂 Elegir carpeta de textos</button>
-                    <div id="textFolderHint" style="font-size:11px;color:var(--text-muted);margin-top:4px">Ninguna seleccionada</div>
-                </div>
+                <button class="gh-btn" style="width:100%" onclick="pickAudioFolder()">🎵 Elegir carpeta de audios</button>
+                <div id="audioFolderHint" style="font-size:11px;color:var(--text-muted);margin-top:4px">Ninguna seleccionada</div>
             </div>
         </div>
 
@@ -836,9 +794,9 @@ Prueba escribiendo algo y presiona el botón ▶ para escucharlo.</textarea>
 
 <!-- ===== FOOTER ===== -->
 <footer class="gh-footer">
-    <span class="gh-foot-name">🎙️ Lectorium</span>
+    <span class="gh-foot-name">Lectorium</span>
     <span id="footerCopyright"></span>
-    <span class="gh-foot-ver">v3.6</span>
+    <span></span>
 </footer>
 
 <!-- ===== SAVE TEXT MODAL ===== -->
@@ -859,13 +817,13 @@ Prueba escribiendo algo y presiona el botón ▶ para escucharlo.</textarea>
 <!-- ===== EXPORT AUDIO MODAL ===== -->
 <div class="gh-modal-overlay" id="audioModal">
     <div class="gh-modal">
-        <div class="gh-modal-header">🎵 Exportar Audio (WebM)</div>
+        <div class="gh-modal-header">🎵 Exportar Audio (MP3)</div>
         <div class="gh-modal-body">
             <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px" id="audioModalInfo">
                 Se grabará el audio mientras se lee el texto. El navegador te pedirá compartir una pestaña o pantalla: marca la casilla <b>"Compartir audio"</b> para capturar la voz.
             </p>
             <label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:6px">Nombre del archivo</label>
-            <input type="text" id="audioFilename" placeholder="audio_espanol.webm" value="">
+            <input type="text" id="audioFilename" placeholder="audio_espanol.mp3" value="">
         </div>
         <div class="gh-modal-footer">
             <button class="gh-btn" onclick="closeModal('audioModal')">Cancelar</button>
@@ -876,6 +834,9 @@ Prueba escribiendo algo y presiona el botón ▶ para escucharlo.</textarea>
 
 <!-- ===== TOAST ===== -->
 <div class="gh-toast" id="toast"></div>
+
+<!-- lamejs: codificador MP3 en el navegador (gratis) -->
+<script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
 
 <script>
 // ============ ESTADO ============
@@ -900,7 +861,6 @@ const DEFAULTS = { rate: 1, pitch: 1, volume: 1 };
 
 // Handles de carpetas (File System Access API). Se recuerdan en IndexedDB.
 let audioDirHandle = null;
-let textDirHandle = null;
 // Igual que Verbium: solo comprobamos si el navegador tiene la función.
 // (No bloqueamos por iframe; si el navegador la ofrece, se intenta y si Chrome
 //  la rechaza por contexto, se captura el error con un mensaje claro.)
@@ -1022,7 +982,6 @@ async function init() {
         speechSynthesis.onvoiceschanged = populateVoices;
     }
     updateCharCount();
-    renderFileList();
 
     try {
         const items = await dbGetAllAudios();
@@ -1273,15 +1232,12 @@ function stop() {
 async function restoreFolders() {
     if (!fsaSupported) {
         const motivo = 'Tu navegador no permite carpetas (usa Chrome/Edge de escritorio)';
-        $('audioFolderHint').textContent = motivo;
-        $('textFolderHint').textContent = motivo;
+        const h = $('audioFolderHint'); if (h) h.textContent = motivo;
         return;
     }
     try {
         const a = await dbGetHandle('audioDir');
-        if (a) { audioDirHandle = a; $('audioFolderHint').textContent = '📁 ' + a.name; $('ribbonAudioFolder')?.classList.add('connected'); }
-        const t = await dbGetHandle('textDir');
-        if (t) { textDirHandle = t; $('textFolderHint').textContent = '📁 ' + t.name; $('ribbonTextFolder')?.classList.add('connected'); }
+        if (a) { audioDirHandle = a; const h = $('audioFolderHint'); if (h) h.textContent = '📁 ' + a.name; $('ribbonAudioFolder')?.classList.add('connected'); }
     } catch (e) { console.warn('No se pudieron restaurar carpetas:', e); }
 }
 
@@ -1311,21 +1267,6 @@ async function pickAudioFolder() {
     }
 }
 
-async function pickTextFolder() {
-    if (!fsaSupported) { showToast(folderUnavailableMsg(), 'warning'); return; }
-    try {
-        textDirHandle = await window.showDirectoryPicker({ id: 'ttsText', mode: 'readwrite' });
-        await dbPutHandle('textDir', textDirHandle);
-        $('textFolderHint').textContent = '📁 ' + textDirHandle.name;
-        $('ribbonTextFolder')?.classList.add('connected');
-        showToast('Carpeta de textos: ' + textDirHandle.name, 'success');
-    } catch (e) {
-        if (e.name === 'AbortError') return;
-        if (e.name === 'SecurityError') { showToast(folderUnavailableMsg(), 'warning'); return; }
-        console.error(e); showToast('No se pudo elegir la carpeta', 'error');
-    }
-}
-
 // Escribe un blob/texto en la carpeta indicada. Devuelve true si lo logró.
 async function writeToFolder(dirHandle, filename, data) {
     if (!dirHandle) return false;
@@ -1335,43 +1276,6 @@ async function writeToFolder(dirHandle, filename, data) {
     await writable.write(data);
     await writable.close();
     return true;
-}
-
-// Leer todos los .txt de la carpeta de textos y añadirlos a "Mis Textos"
-async function loadFromTextFolder() {
-    if (!fsaSupported) { showToast(folderUnavailableMsg(), 'warning'); return; }
-    if (!textDirHandle) { await pickTextFolder(); if (!textDirHandle) return; }
-    if (!(await ensurePermission(textDirHandle, 'read'))) { showToast('Permiso denegado', 'warning'); return; }
-
-    let count = 0;
-    try {
-        for await (const entry of textDirHandle.values()) {
-            if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.txt')) {
-                const file = await entry.getFile();
-                const content = await file.text();
-                const existing = savedTexts.find(t => t.name === entry.name);
-                if (existing) {
-                    existing.content = content;
-                    existing.date = new Date(file.lastModified).toISOString();
-                } else {
-                    savedTexts.unshift({
-                        id: Date.now() + count,
-                        name: entry.name,
-                        content,
-                        date: new Date(file.lastModified).toISOString()
-                    });
-                }
-                count++;
-            }
-        }
-        localStorage.setItem('tts_texts', JSON.stringify(savedTexts));
-        renderFileList();
-        updateCounts();
-        showToast(count > 0 ? `${count} archivo(s) .txt cargados` : 'No se encontraron archivos .txt', count > 0 ? 'success' : 'warning');
-    } catch (e) {
-        console.error(e);
-        showToast('Error al leer la carpeta', 'error');
-    }
 }
 
 // ============ GUARDAR TEXTO ============
@@ -1395,19 +1299,12 @@ async function confirmSaveText() {
     }
     localStorage.setItem('tts_texts', JSON.stringify(savedTexts));
 
-    // Si hay carpeta de textos, guardar también ahí el archivo leído
-    let savedToFolder = false;
-    if (textDirHandle) {
-        try { savedToFolder = await writeToFolder(textDirHandle, name, editor.value); }
-        catch (e) { console.error('No se pudo guardar en la carpeta:', e); }
-    }
-
     currentFilename = name;
     updateTabName(name);
     closeModal('saveModal');
     renderFileList();
     updateCounts();
-    showToast((existing ? 'Texto actualizado' : 'Texto guardado') + (savedToFolder ? ' (también en carpeta)' : '') + ': ' + name, 'success');
+    showToast((existing ? 'Texto actualizado' : 'Texto guardado') + ': ' + name, 'success');
 }
 
 function updateTabName(name) {
@@ -1470,27 +1367,67 @@ function downloadCurrentText() {
     showToast('Texto descargado', 'success');
 }
 
-// ============ EXPORTAR AUDIO ============
+// ============ EXPORTAR AUDIO (MP3) ============
 function exportAudio() {
     const text = editor.value.trim();
     if (!text) { showToast('Escribe algo primero', 'warning'); return; }
-    $('audioFilename').value = currentFilename.replace(/\.txt$/, '') + '.webm';
+    $('audioFilename').value = currentFilename.replace(/\.txt$/, '') + '.mp3';
     const info = $('audioModalInfo');
-    const pasos = 'Al pulsar, Chrome te pedirá compartir: elige la pestaña <b>"Voces Google en español"</b> (ya viene marcada), deja encendido <b>"Compartir también el audio"</b> y pulsa <b>Compartir</b>. Es la única forma de capturar las voces de Google.';
+    const pasos = 'Al pulsar, Chrome te pedirá compartir: elige la pestaña <b>"Lectorium"</b> (ya viene marcada), deja encendido <b>"Compartir también el audio"</b> y pulsa <b>Compartir</b>. Es la forma de capturar la voz de Google. El audio se convertirá a <b>MP3</b> automáticamente.';
     if (audioDirHandle) {
-        info.innerHTML = pasos + `<br><br>El archivo se guardará en tu carpeta <b>${escapeHtml(audioDirHandle.name)}</b>.`;
+        info.innerHTML = pasos + `<br><br>El MP3 se guardará en tu carpeta <b>${escapeHtml(audioDirHandle.name)}</b>.`;
     } else {
-        info.innerHTML = pasos + '<br><br>Se descargará como WebM (elige una carpeta de audios en el panel derecho para guardarlo ahí automáticamente).';
+        info.innerHTML = pasos + '<br><br>Se descargará el MP3 (elige una carpeta de audios para guardarlo ahí automáticamente).';
     }
     openModal('audioModal');
     $('audioFilename').focus();
 }
 
+// Convierte un Blob de audio (WebM/Opus) a MP3 real usando Web Audio + lamejs
+async function convertToMp3(blob) {
+    const arrayBuf = await blob.arrayBuffer();
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AudioCtx();
+    const audioBuf = await ctx.decodeAudioData(arrayBuf);
+    ctx.close();
+
+    const sampleRate = audioBuf.sampleRate;
+    const channels = Math.min(audioBuf.numberOfChannels, 2);
+    const kbps = 128;
+    const encoder = new lamejs.Mp3Encoder(channels, sampleRate, kbps);
+
+    // Float [-1,1] -> Int16
+    const toInt16 = (f32) => {
+        const out = new Int16Array(f32.length);
+        for (let i = 0; i < f32.length; i++) {
+            const s = Math.max(-1, Math.min(1, f32[i]));
+            out[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        }
+        return out;
+    };
+
+    const left = toInt16(audioBuf.getChannelData(0));
+    const right = channels > 1 ? toInt16(audioBuf.getChannelData(1)) : null;
+
+    const mp3Data = [];
+    const block = 1152;
+    for (let i = 0; i < left.length; i += block) {
+        const l = left.subarray(i, i + block);
+        const r = right ? right.subarray(i, i + block) : null;
+        const chunk = right ? encoder.encodeBuffer(l, r) : encoder.encodeBuffer(l);
+        if (chunk.length > 0) mp3Data.push(chunk);
+    }
+    const end = encoder.flush();
+    if (end.length > 0) mp3Data.push(end);
+
+    return new Blob(mp3Data, { type: 'audio/mpeg' });
+}
+
 async function confirmExportAudio() {
     let name = $('audioFilename').value.trim();
     if (!name) name = 'audio_' + Date.now();
-    name = name.replace(/\.(mp3|wav|ogg)$/i, '');
-    if (!name.endsWith('.webm')) name += '.webm';
+    name = name.replace(/\.(webm|wav|ogg)$/i, '');
+    if (!name.endsWith('.mp3')) name += '.mp3';
 
     closeModal('audioModal');
 
@@ -1523,7 +1460,25 @@ async function confirmExportAudio() {
         mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
 
         mediaRecorder.onstop = async () => {
-            const blob = new Blob(audioChunks, { type: 'audio/webm' });
+            const webmBlob = new Blob(audioChunks, { type: 'audio/webm' });
+
+            // Convertir a MP3 real
+            let blob = webmBlob;
+            setStatus('⏳ Convirtiendo a MP3...', 'recording');
+            try {
+                if (typeof lamejs !== 'undefined') {
+                    blob = await convertToMp3(webmBlob);
+                } else {
+                    name = name.replace(/\.mp3$/i, '.webm');
+                    showToast('No se cargó el conversor MP3; se guarda como WebM', 'warning');
+                }
+            } catch (e) {
+                console.error('Conversión MP3 falló:', e);
+                blob = webmBlob;
+                name = name.replace(/\.mp3$/i, '.webm');
+                showToast('No se pudo convertir a MP3; se guarda como WebM', 'warning');
+            }
+
             const item = {
                 id: Date.now(),
                 name,
@@ -1556,8 +1511,8 @@ async function confirmExportAudio() {
             recordingStream = null;
             renderAudioList();
             updateCounts();
-            setStatus('✅ Audio exportado');
-            showToast('Audio exportado' + (savedToFolder ? ' en ' + audioDirHandle.name : '') + ': ' + name, 'success');
+            setStatus('✅ MP3 exportado');
+            showToast('MP3 exportado' + (savedToFolder ? ' en ' + audioDirHandle.name : '') + ': ' + name, 'success');
         };
 
         mediaRecorder.start();
@@ -1622,6 +1577,7 @@ async function clearAllAudio() {
 // ============ RENDER LISTAS ============
 function renderFileList() {
     const container = $('fileList');
+    if (!container) return;
     if (savedTexts.length === 0) {
         container.innerHTML = '<div class="gh-empty"><span class="icon">📄</span>No hay textos guardados aún</div>';
         return;
@@ -1655,18 +1611,18 @@ function renderAudioList() {
 }
 
 function updateCounts() {
-    $('fileCount').textContent = savedTexts.length;
-    $('audioCount').textContent = savedAudios.length;
+    const ac = $('audioCount');
+    if (ac) ac.textContent = savedAudios.length;
 }
 
 // ============ VISTAS ============
 function switchView(view) {
-    document.querySelectorAll('.gh-htab').forEach(el => el.classList.remove('active'));
-    document.querySelector(`[data-view="${view}"]`).classList.add('active');
     $('view-editor').style.display = view === 'editor' ? 'block' : 'none';
-    $('view-files').style.display = view === 'files' ? 'block' : 'none';
     $('view-audio').style.display = view === 'audio' ? 'block' : 'none';
-    if (view === 'files') renderFileList();
+    // Alternar los botones del ribbon: en Audios se muestra "Editor" para volver
+    const rEd = $('ribbonEditor'), rAu = $('ribbonAudios');
+    if (rEd) rEd.style.display = view === 'audio' ? 'flex' : 'none';
+    if (rAu) rAu.style.display = view === 'audio' ? 'none' : 'flex';
     if (view === 'audio') renderAudioList();
 }
 
@@ -1739,7 +1695,6 @@ document.addEventListener('keydown', (e) => {
     }
     if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
     if (e.code === 'Space') { e.preventDefault(); isSpeaking ? togglePause() : speak(); }
-    if (e.ctrlKey && e.key === 's') { e.preventDefault(); saveText(); }
 });
 
 window.addEventListener('beforeunload', (e) => {
