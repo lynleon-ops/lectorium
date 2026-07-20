@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prueba de voces — Puter.js</title>
+<style>
+    :root {
+        --bg: #ffffff;
+        --bg-secondary: #f6f8fa;
+        --border: #d0d7de;
+        --text: #1f2328;
+        --text-secondary: #656d76;
+        --accent: #0969da;
+        --success: #1a7f37;
+        --radius: 3px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        background: var(--bg-secondary);
+        color: var(--text);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        font-size: 15px;
+        line-height: 1.6;
+        padding: 24px 16px;
+    }
+    .card {
+        max-width: 640px;
+        margin: 0 auto;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-top: 3px solid var(--accent);
+        padding: 24px;
+    }
+    h1 { font-size: 22px; margin-bottom: 4px; }
+    .sub { color: var(--text-secondary); font-size: 13px; margin-bottom: 20px; }
+    label { display: block; font-size: 13px; font-weight: 600; margin: 16px 0 6px; }
+    textarea, select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        font-family: inherit;
+        font-size: 14px;
+        background: var(--bg);
+        color: var(--text);
+    }
+    textarea { min-height: 100px; resize: vertical; line-height: 1.6; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+    button {
+        padding: 10px 18px;
+        border: 1px solid var(--accent);
+        background: var(--accent);
+        color: #fff;
+        border-radius: var(--radius);
+        font-size: 14px;
+        font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
+        transition: all 0.12s;
+    }
+    button:hover { background: #0860ca; }
+    button:active { transform: translateY(1px); }
+    button.ghost { background: var(--bg); color: var(--text); border-color: var(--border); }
+    button.ghost:hover { background: var(--bg-secondary); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .status {
+        margin-top: 16px;
+        padding: 10px 12px;
+        border-radius: var(--radius);
+        background: var(--bg-secondary);
+        font-size: 13px;
+        color: var(--text-secondary);
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+    }
+    audio { width: 100%; margin-top: 16px; }
+    .note {
+        margin-top: 20px;
+        padding-top: 16px;
+        border-top: 1px solid var(--border);
+        font-size: 12px;
+        color: var(--text-secondary);
+    }
+</style>
+</head>
+<body>
+<div class="card">
+    <h1>🔊 Prueba de voces en español</h1>
+    <div class="sub">Voces gratuitas de Puter.js — escúchalas y descarga el MP3 para comprobar la calidad.</div>
+
+    <label for="texto">Texto a leer</label>
+    <textarea id="texto">Había una vez un pequeño zorro que vivía en el bosque. Cada mañana, saltaba entre las hojas doradas buscando aventuras nuevas.</textarea>
+
+    <label for="voz">Voz</label>
+    <select id="voz">
+        <option value="Lucia">Lucia — España (mujer)</option>
+        <option value="Enrique">Enrique — España (hombre)</option>
+        <option value="Conchita">Conchita — España (mujer)</option>
+        <option value="Mia">Mia — México (mujer)</option>
+    </select>
+
+    <div class="row">
+        <button id="btnHablar" onclick="hablar()">▶ Escuchar</button>
+        <button class="ghost" id="btnDescargar" onclick="descargar()" disabled>⬇ Descargar MP3</button>
+    </div>
+
+    <div class="status" id="status">Escribe algo y pulsa "Escuchar".</div>
+    <audio id="player" controls style="display:none"></audio>
+
+    <div class="note">
+        Nota: la primera vez, Puter puede pedirte crear una cuenta gratuita o continuar como invitado.
+        Si una voz no funciona, prueba con otra. Esto es solo una prueba de sonido, no es Lectorium.
+    </div>
+</div>
+
+<!-- Librería Puter.js -->
+<script>
+    let puterListo = false;
+    let puterFallo = false;
+</script>
+<script src="https://js.puter.com/v2/"
+        onload="puterListo = true; if(window._marcarPuter) window._marcarPuter();"
+        onerror="puterFallo = true; if(window._marcarPuter) window._marcarPuter();"></script>
+<script>
+    let ultimoAudio = null;
+
+    const $ = id => document.getElementById(id);
+    function setStatus(msg) { $('status').textContent = msg; }
+
+    // Actualiza el estado según si la librería cargó
+    window._marcarPuter = function () {
+        if (puterFallo || typeof puter === 'undefined') {
+            setStatus('⚠️ No se pudo cargar Puter.js. Puede estar bloqueado por tu red, un antivirus o un bloqueador de anuncios. Prueba en otra red o desactiva el bloqueador.');
+            $('btnHablar').disabled = true;
+        } else if (puterListo) {
+            setStatus('✅ Listo. Escribe algo y pulsa "Escuchar".');
+        }
+    };
+
+    // Espera hasta que Puter.js esté disponible (máx ~8 s)
+    function esperarPuter(timeout = 8000) {
+        return new Promise((resolve, reject) => {
+            if (typeof puter !== 'undefined') return resolve();
+            if (puterFallo) return reject(new Error('La librería no se cargó'));
+            const inicio = Date.now();
+            const t = setInterval(() => {
+                if (typeof puter !== 'undefined') { clearInterval(t); resolve(); }
+                else if (puterFallo || Date.now() - inicio > timeout) {
+                    clearInterval(t);
+                    reject(new Error('La librería no se cargó (posible bloqueo de red o adblocker)'));
+                }
+            }, 150);
+        });
+    }
+
+    async function generar() {
+        const texto = $('texto').value.trim();
+        if (!texto) { setStatus('Escribe algún texto primero.'); return null; }
+
+        setStatus('⏳ Esperando la librería de voz...');
+        try {
+            await esperarPuter();
+        } catch (e) {
+            setStatus('⚠️ ' + e.message + '. Prueba en otra red o desactiva el bloqueador de anuncios.');
+            return null;
+        }
+
+        const voz = $('voz').value;
+        setStatus('⏳ Generando audio con la voz "' + voz + '"...');
+        $('btnHablar').disabled = true;
+
+        try {
+            const audio = await puter.ai.txt2speech(texto, {
+                voice: voz,
+                language: 'es-ES',
+                engine: 'neural'
+            });
+            return audio;
+        } catch (e) {
+            console.error(e);
+            setStatus('⚠️ Error: ' + (e.message || e) + '. Prueba con otra voz.');
+            return null;
+        } finally {
+            $('btnHablar').disabled = false;
+        }
+    }
+
+    async function hablar() {
+        const audio = await generar();
+        if (!audio) return;
+        ultimoAudio = audio;
+        setStatus('🔊 Reproduciendo. Si te gusta, puedes descargar el MP3.');
+        audio.play();
+        $('btnDescargar').disabled = false;
+
+        if (audio.src) {
+            const p = $('player');
+            p.src = audio.src;
+            p.style.display = 'block';
+        }
+    }
+
+    async function descargar() {
+        if (!ultimoAudio || !ultimoAudio.src) {
+            setStatus('Primero pulsa "Escuchar" para generar el audio.');
+            return;
+        }
+        try {
+            setStatus('⏳ Preparando descarga...');
+            const resp = await fetch(ultimoAudio.src);
+            const blob = await resp.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'prueba_' + $('voz').value + '.mp3';
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            setStatus('✅ MP3 descargado. Revisa tu carpeta de Descargas.');
+        } catch (e) {
+            console.error(e);
+            setStatus('⚠️ No se pudo descargar: ' + (e.message || e));
+        }
+    }
+
+    // Comprobar estado al cargar la página
+    window.addEventListener('load', () => setTimeout(window._marcarPuter, 500));
+</script>
+</body>
+</html>
