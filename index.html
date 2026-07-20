@@ -181,46 +181,55 @@
         /* ===== PLAYER (controles bajo el área de texto) ===== */
         .gh-player {
             display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 12px 16px;
-            background: var(--bg-secondary);
+            align-items: stretch;
+            gap: 0;
+            padding: 10px 16px;
+            background: #2c2c2e;
             border: 1px solid var(--border);
             border-top: none;
-            border-radius: 0 0 var(--radius-lg) var(--radius-lg);
             flex-wrap: wrap;
         }
+        /* Botones rectangulares estilo Walkman */
         .gh-player-btn {
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
-            padding: 9px 16px;
-            border: 1px solid var(--border);
-            background: var(--bg);
-            border-radius: 100px;
+            min-width: 52px;
+            padding: 10px 14px;
+            border: 1px solid #4a4a4c;
+            background: #3a3a3c;
+            border-radius: 0;
             cursor: pointer;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
             font-family: inherit;
-            color: var(--text);
-            transition: all 0.15s;
+            color: #e8e8ea;
+            transition: background 0.12s;
+            margin-left: -1px;   /* bordes contiguos, como una botonera */
         }
-        .gh-player-btn:hover { border-color: var(--accent); color: var(--accent); }
-        .gh-player-btn .pic { font-size: 15px; }
-        /* Botón principal circular (Leer) */
+        .gh-player-btn:first-child { margin-left: 0; }
+        .gh-player-btn:hover { background: #4a4a4c; }
+        .gh-player-btn:active { background: #565658; }
+        .gh-player-btn .pic { font-size: 14px; line-height: 1; }
+        /* Botón principal Generar/Leer: verde tipo REC/PLAY */
         .gh-player-btn.main {
             background: var(--accent);
-            color: #fff;
             border-color: var(--accent);
-            width: 46px; height: 46px;
-            padding: 0;
-            border-radius: 50%;
-            font-size: 18px;
+            color: #fff;
+            font-weight: 700;
+            padding: 10px 20px;
         }
-        .gh-player-btn.main:hover { background: #0860ca; color: #fff; }
-        .gh-player-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
-        .gh-player-spacer { flex: 1; }
+        .gh-player-btn.main:hover { background: #0860ca; }
+        .gh-player-btn.rec {
+            background: var(--danger);
+            border-color: var(--danger);
+            color: #fff;
+            font-weight: 700;
+        }
+        .gh-player-btn.rec:hover { background: #a40e19; }
+        .gh-player-spacer { flex: 1; min-width: 12px; }
+        .gh-player-btn:disabled { opacity: 0.4; cursor: not-allowed; }
         .gh-htabs {
             display: flex;
             align-items: center;
@@ -705,18 +714,30 @@ Prueba escribiendo algo y presiona el botón ▶ para escucharlo.</textarea>
                     <span id="charInfo">0 caracteres | 0 palabras</span>
                 </div>
 
-                <!-- PLAYER: controles tipo reproductor bajo el área de texto -->
+                <!-- PLAYER: botonera estilo Walkman bajo el área de texto -->
                 <div class="gh-player">
-                    <button class="gh-player-btn main" id="btnSpeak" onclick="speak()" title="Leer">▶️</button>
-                    <button class="gh-player-btn" id="btnPause" onclick="togglePause()" title="Pausar">
-                        <span class="pic">⏸️</span> Pausar
+                    <button class="gh-player-btn" id="btnRewind" onclick="skipBack()" title="Retroceder 10 s">
+                        <span class="pic">⏪</span>
                     </button>
-                    <button class="gh-player-btn danger" id="btnStop" onclick="stop()" title="Detener">
-                        <span class="pic">⏹️</span> Detener
+                    <button class="gh-player-btn main" id="btnSpeak" onclick="speak()" title="Leer">
+                        <span class="pic">▶</span> Leer
+                    </button>
+                    <button class="gh-player-btn" id="btnPause" onclick="togglePause()" title="Pausar">
+                        <span class="pic">⏸</span>
+                    </button>
+                    <button class="gh-player-btn" id="btnStop" onclick="stop()" title="Detener">
+                        <span class="pic">⏹</span>
+                    </button>
+                    <button class="gh-player-btn" id="btnForward" onclick="skipForward()" title="Avanzar 10 s">
+                        <span class="pic">⏩</span>
+                    </button>
+                    <div class="gh-player-spacer"></div>
+                    <button class="gh-player-btn rec" id="btnGenerate" onclick="exportAudio()" title="Generar y guardar el audio MP3">
+                        <span class="pic">⏺</span> Generar Audio
                     </button>
                     <div class="gh-player-spacer"></div>
                     <button class="gh-player-btn" onclick="clearText()" title="Limpiar el editor">
-                        <span class="pic">🗑️</span> Limpiar
+                        <span class="pic">🗑</span>
                     </button>
                 </div>
             </div>
@@ -794,24 +815,6 @@ Prueba escribiendo algo y presiona el botón ▶ para escucharlo.</textarea>
         <div class="gh-modal-footer">
             <button class="gh-btn" onclick="closeModal('saveModal')">Cancelar</button>
             <button class="gh-btn gh-btn-primary" onclick="confirmSaveText()">Guardar</button>
-        </div>
-    </div>
-</div>
-
-<!-- ===== EXPORT AUDIO MODAL ===== -->
-<div class="gh-modal-overlay" id="audioModal">
-    <div class="gh-modal">
-        <div class="gh-modal-header">🎵 Exportar Audio (MP3)</div>
-        <div class="gh-modal-body">
-            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px" id="audioModalInfo">
-                Se grabará el audio mientras se lee el texto. El navegador te pedirá compartir una pestaña o pantalla: marca la casilla <b>"Compartir audio"</b> para capturar la voz.
-            </p>
-            <label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:6px">Nombre del archivo</label>
-            <input type="text" id="audioFilename" placeholder="audio_espanol.mp3" value="">
-        </div>
-        <div class="gh-modal-footer">
-            <button class="gh-btn" onclick="closeModal('audioModal')">Cancelar</button>
-            <button class="gh-btn gh-btn-accent" onclick="confirmExportAudio()">▶️ Grabar y Exportar</button>
         </div>
     </div>
 </div>
@@ -982,7 +985,7 @@ async function init() {
 
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
-    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v4.1. Todos los derechos reservados.`;
+    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v4.2. Todos los derechos reservados.`;
 }
 
 // ============ VOCES (solo Google es-ES / es-US) ============
@@ -1114,9 +1117,8 @@ function startSpeech(text) {
     queueIndex = 0;
     isSpeaking = true;
     isPaused = false;
-    btnSpeak.innerHTML = '🔁';
-    btnSpeak.title = 'Repetir';
-    btnPause.innerHTML = '<span class="pic">⏸️</span> Pausar';
+    btnSpeak.innerHTML = '<span class="pic">🔁</span> Repetir';
+    btnPause.innerHTML = '<span class="pic">⏸</span>';
     startKeepAlive();
     speakNextChunk();
 }
@@ -1205,9 +1207,8 @@ function finishSpeechState() {
     speechQueue = [];
     queueIndex = 0;
     stopKeepAlive();
-    btnSpeak.innerHTML = '▶️';
-    btnSpeak.title = 'Leer';
-    btnPause.innerHTML = '<span class="pic">⏸️</span> Pausar';
+    btnSpeak.innerHTML = '<span class="pic">▶</span> Leer';
+    btnPause.innerHTML = '<span class="pic">⏸</span>';
 }
 
 function togglePause() {
@@ -1215,12 +1216,12 @@ function togglePause() {
     if (isPaused) {
         isPaused = false;
         speechSynthesis.resume();
-        btnPause.innerHTML = '<span class="pic">⏸️</span> Pausar';
+        btnPause.innerHTML = '<span class="pic">⏸</span>';
         setStatus('🔊 Leyendo...', 'speaking');
     } else {
         isPaused = true;
         speechSynthesis.pause();
-        btnPause.innerHTML = '<span class="pic">▶️</span> Reanudar';
+        btnPause.innerHTML = '<span class="pic">▶</span>';
         setStatus('⏸️ Pausado', 'paused');
     }
 }
@@ -1230,6 +1231,23 @@ function stop() {
     speechSynthesis.cancel();
     setStatus('⏹️ Detenido');
     if (isRecording) stopRecording();
+}
+
+// Retroceder: salta ~2 fragmentos atrás en la lectura del navegador
+function skipBack() {
+    if (!isSpeaking) return;
+    queueIndex = Math.max(0, queueIndex - 3);
+    speechSynthesis.cancel();
+    speakNextChunk();
+}
+
+// Avanzar: salta ~2 fragmentos adelante
+function skipForward() {
+    if (!isSpeaking) return;
+    queueIndex = Math.min(speechQueue.length, queueIndex + 1);
+    speechSynthesis.cancel();
+    if (queueIndex >= speechQueue.length) { onSpeechFinished(); return; }
+    speakNextChunk();
 }
 
 // Guarda un blob en el disco. Usa "Guardar como" de Chrome (showSaveFilePicker)
@@ -1360,15 +1378,104 @@ function downloadCurrentText() {
     showToast('Texto descargado', 'success');
 }
 
-// ============ EXPORTAR AUDIO (MP3) ============
-function exportAudio() {
+// ============ GENERAR AUDIO (MP3) — estilo ElevenLabs ============
+// Un solo botón: pide compartir la pestaña, e inmediatamente lee + graba.
+// Al terminar, convierte a MP3 y abre "Guardar como".
+async function exportAudio() {
     const text = editor.value.trim();
     if (!text) { showToast('Escribe algo primero', 'warning'); return; }
-    $('audioFilename').value = currentFilename.replace(/\.txt$/, '') + '.mp3';
-    const info = $('audioModalInfo');
-    info.innerHTML = 'Al pulsar, Chrome te pedirá compartir: elige la pestaña <b>"Lectorium"</b> (ya viene marcada), deja encendido <b>"Compartir también el audio"</b> y pulsa <b>Compartir</b>. Es la forma de capturar la voz de Google.<br><br>Cuando termine, Chrome abrirá <b>"Guardar como"</b> para que elijas tú mismo la carpeta donde guardar el MP3.';
-    openModal('audioModal');
-    $('audioFilename').focus();
+    if (isRecording) { showToast('Ya se está grabando', 'warning'); return; }
+
+    const baseName = currentFilename.replace(/\.txt$/, '') || 'audio';
+
+    // 1) Pedir compartir la pestaña CON audio (esto debe salir del clic del usuario)
+    let stream;
+    try {
+        const display = await navigator.mediaDevices.getDisplayMedia({
+            video: true,
+            audio: true,
+            preferCurrentTab: true,
+            selfBrowserSurface: 'include'
+        });
+        const audioTrack = display.getAudioTracks()[0];
+        display.getVideoTracks().forEach(t => t.stop());   // no necesitamos video
+        if (!audioTrack) {
+            display.getTracks().forEach(t => t.stop());
+            showToast('⚠️ Debes activar "Compartir también el audio de la pestaña" y elegir la pestaña de Lectorium.', 'error');
+            return;
+        }
+        stream = new MediaStream([audioTrack]);
+    } catch (e) {
+        if (e.name === 'NotAllowedError') { showToast('Grabación cancelada', 'warning'); return; }
+        console.error(e);
+        showToast('No se pudo iniciar la grabación: ' + (e.message || e.name), 'error');
+        return;
+    }
+
+    // 2) Empezar a grabar
+    recordingStream = stream;
+    let mimeType = 'audio/webm';
+    if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = '';
+    mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+    audioChunks = [];
+    mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
+    mediaRecorder.onstop = () => finalizeRecording(baseName);
+
+    mediaRecorder.start();
+    isRecording = true;
+    setStatus('🔴 Grabando y leyendo...', 'recording');
+
+    // 3) Leer el texto (cuando termine, se detiene la grabación desde onSpeechFinished)
+    setTimeout(() => speak(), 400);
+}
+
+// Al detener la grabación: convertir a MP3 y guardar con "Guardar como"
+async function finalizeRecording(baseName) {
+    const webmBlob = new Blob(audioChunks, { type: 'audio/webm' });
+
+    if (webmBlob.size < 1000) {
+        // No se capturó audio: casi seguro no se marcó "Compartir audio"
+        isRecording = false;
+        recordingStream?.getTracks().forEach(t => t.stop());
+        recordingStream = null;
+        setStatus('⚠️ No se capturó audio');
+        showToast('⚠️ No se grabó audio. Al compartir, activa "Compartir también el audio de la pestaña".', 'error');
+        return;
+    }
+
+    let blob = webmBlob;
+    let ext = '.mp3';
+    setStatus('⏳ Convirtiendo a MP3...', 'recording');
+    try {
+        if (typeof lamejs !== 'undefined') {
+            blob = await convertToMp3(webmBlob);
+        } else {
+            ext = '.webm';
+            showToast('No se cargó el conversor MP3; se guarda como WebM', 'warning');
+        }
+    } catch (e) {
+        console.error('Conversión MP3 falló:', e);
+        blob = webmBlob;
+        ext = '.webm';
+        showToast('No se pudo convertir a MP3; se guarda como WebM', 'warning');
+    }
+
+    const name = baseName.replace(/\.(mp3|webm|wav|ogg)$/i, '') + ext;
+
+    // Registrar en "Mis audios"
+    const item = { id: Date.now(), name, size: (blob.size / 1024).toFixed(1) + ' KB', date: new Date().toISOString() };
+    try { await dbPutAudio({ ...item, blob }); savedAudios.unshift(item); }
+    catch (e) { console.error('IndexedDB:', e); }
+
+    isRecording = false;
+    recordingStream?.getTracks().forEach(t => t.stop());
+    recordingStream = null;
+    renderAudioList();
+    updateCounts();
+    setStatus('Listo');
+
+    // Guardar con "Guardar como" de Chrome
+    await saveBlobToDisk(blob, name, ext);
 }
 
 // Convierte un Blob de audio (WebM/Opus) a MP3 real usando Web Audio + lamejs
@@ -1409,103 +1516,6 @@ async function convertToMp3(blob) {
     if (end.length > 0) mp3Data.push(end);
 
     return new Blob(mp3Data, { type: 'audio/mpeg' });
-}
-
-async function confirmExportAudio() {
-    let name = $('audioFilename').value.trim();
-    if (!name) name = 'audio_' + Date.now();
-    name = name.replace(/\.(webm|wav|ogg)$/i, '');
-    if (!name.endsWith('.mp3')) name += '.mp3';
-
-    closeModal('audioModal');
-
-    try {
-        let stream;
-        try {
-            const display = await navigator.mediaDevices.getDisplayMedia({
-                video: true,
-                audio: true,
-                preferCurrentTab: true,
-                selfBrowserSurface: 'include'
-            });
-            const audioTrack = display.getAudioTracks()[0];
-            display.getVideoTracks().forEach(t => t.stop());
-            if (!audioTrack) {
-                display.getTracks().forEach(t => t.stop());
-                showToast('No se compartió el audio. Marca "Compartir audio".', 'warning');
-                return;
-            }
-            stream = new MediaStream([audioTrack]);
-        } catch (e) {
-            if (e.name === 'NotAllowedError') { showToast('Grabación cancelada', 'warning'); return; }
-            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            showToast('Grabando con micrófono (sube el volumen de los altavoces)', 'warning');
-        }
-
-        recordingStream = stream;
-        mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-        audioChunks = [];
-        mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
-
-        mediaRecorder.onstop = async () => {
-            const webmBlob = new Blob(audioChunks, { type: 'audio/webm' });
-
-            // Convertir a MP3 real
-            let blob = webmBlob;
-            let ext = '.mp3';
-            setStatus('⏳ Convirtiendo a MP3...', 'recording');
-            try {
-                if (typeof lamejs !== 'undefined') {
-                    blob = await convertToMp3(webmBlob);
-                } else {
-                    ext = '.webm';
-                    showToast('No se cargó el conversor MP3; se guarda como WebM', 'warning');
-                }
-            } catch (e) {
-                console.error('Conversión MP3 falló:', e);
-                blob = webmBlob;
-                ext = '.webm';
-                showToast('No se pudo convertir a MP3; se guarda como WebM', 'warning');
-            }
-            name = name.replace(/\.(mp3|webm|wav|ogg)$/i, '') + ext;
-
-            // Registrar en la lista "Mis audios" (IndexedDB) antes de guardar
-            const item = {
-                id: Date.now(),
-                name,
-                size: (blob.size / 1024).toFixed(1) + ' KB',
-                date: new Date().toISOString()
-            };
-            try {
-                await dbPutAudio({ ...item, blob });
-                savedAudios.unshift(item);
-            } catch (e) {
-                console.error('No se pudo guardar en IndexedDB:', e);
-            }
-
-            isRecording = false;
-            recordingStream?.getTracks().forEach(t => t.stop());
-            recordingStream = null;
-            renderAudioList();
-            updateCounts();
-            setStatus('Listo');
-
-            // Guardar el archivo: Chrome abre su propia ventana "Guardar como"
-            await saveBlobToDisk(blob, name, ext);
-        };
-
-        mediaRecorder.start();
-        isRecording = true;
-        setStatus('🔴 Grabando audio...', 'recording');
-        setTimeout(() => speak(), 300);
-    } catch (err) {
-        console.error(err);
-        showToast('Error al grabar. Permite el acceso al audio.', 'error');
-        isRecording = false;
-        recordingStream?.getTracks().forEach(t => t.stop());
-        recordingStream = null;
-        setStatus('Listo');
-    }
 }
 
 function stopRecording() {
@@ -1639,7 +1649,6 @@ function closeModal(id) { $(id).classList.remove('show'); }
 function anyModalOpen() { return document.querySelector('.gh-modal-overlay.show'); }
 
 $('saveFilename').addEventListener('keydown', e => { if (e.key === 'Enter') confirmSaveText(); });
-$('audioFilename').addEventListener('keydown', e => { if (e.key === 'Enter') confirmExportAudio(); });
 
 document.querySelectorAll('.gh-modal-overlay').forEach(overlay => {
     overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('show'); });
