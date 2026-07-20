@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text-to-Speech Reader — Español</title>
+    <title>Lectorium — Lector en español</title>
     <style>
         /* ===== GITHUB LIGHT THEME ===== */
         :root {
@@ -45,15 +45,16 @@
 
         /* ===== HEADER ===== */
         .gh-header {
+            max-width: 1100px;
+            margin: 20px auto 0;
             background: var(--bg);
-            border-bottom: 1px solid var(--border);
-            padding: 16px 32px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 16px 24px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            position: sticky;
-            top: 0;
-            z-index: 100;
+            box-shadow: var(--shadow-sm);
         }
         .gh-header-left {
             display: flex;
@@ -90,11 +91,45 @@
         .gh-layout {
             max-width: 1100px;
             margin: 0 auto;
-            padding: 24px 32px;
+            padding: 20px 32px;
             display: grid;
             grid-template-columns: minmax(0, 1fr) 300px;
             gap: 24px;
             align-items: start;
+        }
+
+        /* ===== FOOTER ===== */
+        .gh-footer {
+            max-width: 1100px;
+            margin: 0 auto 24px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+            box-shadow: var(--shadow-sm);
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        .gh-footer .gh-foot-name {
+            font-weight: 600;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .gh-footer .gh-foot-ver {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            padding: 2px 10px;
+            border-radius: 100px;
         }
 
         /* ===== HEADER TABS ===== */
@@ -284,7 +319,7 @@
         /* ===== RIGHT SIDEBAR ===== */
         .gh-side {
             position: sticky;
-            top: 84px;
+            top: 20px;
         }
         .gh-panel {
             background: var(--bg);
@@ -516,9 +551,11 @@
             .gh-layout { grid-template-columns: 1fr; }
             .gh-side { position: static; }
             .gh-header { flex-wrap: wrap; gap: 10px; }
+            .gh-header, .gh-footer { margin-left: 16px; margin-right: 16px; }
         }
         @media (max-width: 600px) {
-            .gh-header { padding: 12px 16px; }
+            .gh-header { padding: 12px 16px; margin-top: 12px; }
+            .gh-footer { padding: 12px 16px; justify-content: center; text-align: center; }
             .gh-layout { padding: 16px; }
             .gh-toolbar { gap: 6px; }
             .gh-btn { padding: 5px 10px; font-size: 12px; }
@@ -532,9 +569,8 @@
 <header class="gh-header">
     <div class="gh-header-left">
         <div class="gh-logo">🎙️</div>
-        <div class="gh-title">TTS Reader <span>/ español</span></div>
-        <span class="gh-badge">v3.0</span>
-        <span class="gh-badge" id="engineBadge" title="Motor de voz activo">💻 Voz del sistema</span>
+        <div class="gh-title">Lectorium <span>/ español</span></div>
+        <span class="gh-badge">v3.2</span>
     </div>
     <nav class="gh-htabs">
         <button class="gh-htab active" data-view="editor" onclick="switchView('editor')">
@@ -611,6 +647,7 @@ Prueba escribiendo algo y presiona "Leer" para escucharlo en español.</textarea
         <div id="view-files" style="display:none">
             <div class="gh-toolbar">
                 <button class="gh-btn gh-btn-primary" onclick="saveText()">➕ Nuevo Texto</button>
+                <button class="gh-btn" onclick="loadFromTextFolder()">📂 Leer de carpeta</button>
                 <button class="gh-btn" onclick="exportAllTexts()">📦 Exportar Todo</button>
             </div>
             <div class="gh-panel-body">
@@ -637,12 +674,13 @@ Prueba escribiendo algo y presiona "Leer" para escucharlo en español.</textarea
         <div class="gh-panel">
             <div class="gh-panel-header">
                 🎛️ Voz y ajustes
-                <button class="gh-btn" style="padding:2px 8px;font-size:12px" onclick="checkPiper(true)" title="Buscar servidor Piper">🔄 Piper</button>
+                <button class="gh-btn" style="padding:2px 8px;font-size:12px" onclick="resetVoiceSettings()" title="Volver a la configuración inicial">↺ Restablecer</button>
             </div>
             <div class="gh-panel-body">
                 <div class="gh-control">
-                    <label>Voz</label>
+                    <label>Voz (Google español)</label>
                     <select id="voiceSelect"></select>
+                    <div id="voiceHint" style="font-size:11px;color:var(--text-muted);margin-top:4px"></div>
                 </div>
                 <div class="gh-control">
                     <label>Velocidad</label>
@@ -668,6 +706,23 @@ Prueba escribiendo algo y presiona "Leer" para escucharlo en español.</textarea
             </div>
         </div>
 
+        <!-- Folders -->
+        <div class="gh-panel">
+            <div class="gh-panel-header">📁 Carpetas</div>
+            <div class="gh-panel-body">
+                <div class="gh-control">
+                    <label>Carpeta de audios</label>
+                    <button class="gh-btn" style="width:100%" onclick="pickAudioFolder()">🎵 Elegir carpeta de audios</button>
+                    <div id="audioFolderHint" style="font-size:11px;color:var(--text-muted);margin-top:4px">Ninguna seleccionada</div>
+                </div>
+                <div class="gh-control">
+                    <label>Carpeta de textos</label>
+                    <button class="gh-btn" style="width:100%" onclick="pickTextFolder()">📂 Elegir carpeta de textos</button>
+                    <div id="textFolderHint" style="font-size:11px;color:var(--text-muted);margin-top:4px">Ninguna seleccionada</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Actions -->
         <div class="gh-panel">
             <div class="gh-panel-header">⚡ Acciones</div>
@@ -681,6 +736,13 @@ Prueba escribiendo algo y presiona "Leer" para escucharlo en español.</textarea
     </aside>
 
 </div>
+
+<!-- ===== FOOTER ===== -->
+<footer class="gh-footer">
+    <span class="gh-foot-name">🎙️ Lectorium</span>
+    <span id="footerCopyright"></span>
+    <span class="gh-foot-ver">v3.2</span>
+</footer>
 
 <!-- ===== SAVE TEXT MODAL ===== -->
 <div class="gh-modal-overlay" id="saveModal">
@@ -703,7 +765,7 @@ Prueba escribiendo algo y presiona "Leer" para escucharlo en español.</textarea
         <div class="gh-modal-header">🎵 Exportar Audio (WebM)</div>
         <div class="gh-modal-body">
             <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px" id="audioModalInfo">
-                Se grabará el audio mientras se lee el texto.
+                Se grabará el audio mientras se lee el texto. El navegador te pedirá compartir una pestaña o pantalla: marca la casilla <b>"Compartir audio"</b> para capturar la voz.
             </p>
             <label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:6px">Nombre del archivo</label>
             <input type="text" id="audioFilename" placeholder="audio_espanol.webm" value="">
@@ -718,22 +780,10 @@ Prueba escribiendo algo y presiona "Leer" para escucharlo en español.</textarea
 <!-- ===== TOAST ===== -->
 <div class="gh-toast" id="toast"></div>
 
-<!-- Piper WASM (corre en el navegador; requiere que la página se sirva por http/https) -->
-<script type="module">
-try {
-    if (location.protocol !== 'file:') {
-        const tts = await import('https://cdn.jsdelivr.net/npm/@mintplex-labs/piper-tts-web/+esm');
-        window.__piperWeb = tts;
-        window.onPiperWebReady?.();
-    }
-} catch (e) {
-    console.warn('Piper web (WASM) no disponible:', e);
-}
-</script>
-
 <script>
-// ============ STATE ============
+// ============ ESTADO ============
 let voices = [];
+let googleVoices = [];          // solo voces Google es-ES / es-US
 let isSpeaking = false;
 let isPaused = false;
 let isRecording = false;
@@ -743,127 +793,41 @@ let audioChunks = [];
 let currentFilename = 'sin_titulo.txt';
 let savedTexts = loadJSON('tts_texts');
 let savedAudios = [];           // metadata en memoria; los blobs viven en IndexedDB
-let speechQueue = [];           // fragmentos pendientes (voces del sistema)
+let speechQueue = [];
 let queueIndex = 0;
-let keepAliveTimer = null;      // workaround para el corte de Chrome en textos largos
-let currentAudioUrl = null;     // object URL del reproductor de la lista de audios
+let keepAliveTimer = null;
+let currentAudioUrl = null;
+
+// Valores iniciales de la configuración de voz (para el botón Restablecer)
+const DEFAULTS = { rate: 1, pitch: 1, volume: 1 };
+
+// Handles de carpetas (File System Access API). Se recuerdan en IndexedDB.
+let audioDirHandle = null;
+let textDirHandle = null;
+// La API existe, pero además NO funciona dentro de un iframe de otro origen
+// (p. ej. una vista previa embebida). Solo funciona con la página en su propia pestaña.
+let inCrossOriginFrame = false;
+try { inCrossOriginFrame = (window.self !== window.top); } catch (e) { inCrossOriginFrame = true; }
+const fsaSupported = ('showDirectoryPicker' in window) && !inCrossOriginFrame;
 
 function loadJSON(key) {
     try { return JSON.parse(localStorage.getItem(key) || '[]'); }
     catch { return []; }
 }
 
-// ============ PIPER (servidor local) ============
-const PIPER_URL = 'http://127.0.0.1:5005';
-let piperAvailable = false;
-let piperVoices = [];
-let ttsAudio = new Audio();     // reproductor del audio generado por Piper
-let piperPlaying = false;
-let piperUrl = null;            // object URL de la reproducción actual de Piper
-
-function isPiperSelected() {
-    return piperAvailable && voiceSelect.value.startsWith('piper:');
-}
-
-// ============ PIPER WEB (WASM en el navegador) ============
-// Se activa cuando la página se sirve por http/https (GitHub Pages, SiteGround...).
-// La primera vez que se usa una voz, descarga el modelo (~20-60 MB) y queda en caché.
-let piperWebReady = false;
-const PIPER_WEB_VOICES = [
-    { id: 'es_ES-davefx-medium',   label: 'Davefx (España, masculina)' },
-    { id: 'es_ES-sharvard-medium', label: 'Sharvard (España)' },
-    { id: 'es_MX-claude-high',     label: 'Claude (México, alta calidad)' },
-    { id: 'es_MX-ale-medium',      label: 'Ale (México)' },
-    { id: 'es_AR-daniela-high',    label: 'Daniela (Argentina, alta calidad)' }
-];
-
-window.onPiperWebReady = () => {
-    piperWebReady = true;
-    updateEngineBadge();
-    renderVoiceOptions();
-};
-
-function isPiperWebSelected() {
-    return piperWebReady && voiceSelect.value.startsWith('web:');
-}
-
-async function piperWebSynthesize(text) {
-    const voiceId = voiceSelect.value.slice('web:'.length);
-    let lastPct = -1;
-    const wav = await window.__piperWeb.predict({ text, voiceId }, (progress) => {
-        if (progress && progress.total) {
-            const pct = Math.round((progress.loaded / progress.total) * 100);
-            if (pct !== lastPct) {
-                lastPct = pct;
-                setStatus(`⬇️ Descargando voz (solo la primera vez)... ${pct}%`, 'recording');
-            }
-        }
-    });
-    return wav;   // Blob WAV
-}
-
-async function checkPiper(manual = false) {
-    try {
-        const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), 2000);
-        const res = await fetch(PIPER_URL + '/api/voices', { signal: ctrl.signal });
-        clearTimeout(timer);
-        const data = await res.json();
-        piperVoices = data.voices || [];
-        piperAvailable = piperVoices.length > 0;
-    } catch {
-        piperAvailable = false;
-        piperVoices = [];
-    }
-    updateEngineBadge();
-    renderVoiceOptions();
-    if (manual) {
-        showToast(piperAvailable
-            ? `Piper conectado (${piperVoices.length} ${piperVoices.length === 1 ? 'voz' : 'voces'})`
-            : 'Piper no responde. Inicia 2_iniciar_servidor.bat', piperAvailable ? 'success' : 'warning');
-    }
-}
-
-function updateEngineBadge() {
-    const badge = $('engineBadge');
-    if (piperAvailable) {
-        badge.textContent = '🎙️ Piper conectado';
-        badge.style.background = 'var(--success-bg)';
-        badge.style.color = 'var(--success)';
-        badge.style.borderColor = 'var(--success)';
-    } else if (piperWebReady) {
-        badge.textContent = '🌐 Piper web listo';
-        badge.style.background = 'var(--success-bg)';
-        badge.style.color = 'var(--success)';
-        badge.style.borderColor = 'var(--success)';
-    } else {
-        badge.textContent = '💻 Voz del sistema';
-        badge.style.background = '';
-        badge.style.color = '';
-        badge.style.borderColor = '';
-    }
-}
-
-async function piperSynthesize(text) {
-    const voiceName = voiceSelect.value.slice('piper:'.length);
-    const res = await fetch(PIPER_URL + '/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, voice: voiceName, rate: parseFloat(rate.value) })
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return await res.blob();   // WAV
-}
-
-// ============ INDEXEDDB (persistencia real de audios) ============
+// ============ INDEXEDDB ============
+// Guarda blobs de audio y los handles de carpeta (que sí se pueden serializar en IDB).
 const DB_NAME = 'tts_reader';
 const DB_STORE = 'audios';
+const DB_HANDLES = 'handles';
 
 function openDB() {
     return new Promise((resolve, reject) => {
-        const req = indexedDB.open(DB_NAME, 1);
-        req.onupgradeneeded = () => {
-            req.result.createObjectStore(DB_STORE, { keyPath: 'id' });
+        const req = indexedDB.open(DB_NAME, 2);
+        req.onupgradeneeded = (e) => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains(DB_STORE)) db.createObjectStore(DB_STORE, { keyPath: 'id' });
+            if (!db.objectStoreNames.contains(DB_HANDLES)) db.createObjectStore(DB_HANDLES);
         };
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => reject(req.error);
@@ -918,6 +882,25 @@ async function dbClearAudios() {
     });
 }
 
+async function dbPutHandle(key, handle) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(DB_HANDLES, 'readwrite');
+        tx.objectStore(DB_HANDLES).put(handle, key);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+    });
+}
+
+async function dbGetHandle(key) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const req = db.transaction(DB_HANDLES, 'readonly').objectStore(DB_HANDLES).get(key);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error);
+    });
+}
+
 // ============ DOM ============
 const $ = id => document.getElementById(id);
 const editor = $('editor');
@@ -944,7 +927,6 @@ async function init() {
     }
     updateCharCount();
     renderFileList();
-    checkPiper();   // detectar servidor Piper en segundo plano
 
     try {
         const items = await dbGetAllAudios();
@@ -957,89 +939,87 @@ async function init() {
     }
     renderAudioList();
     updateCounts();
+    restoreFolders();
+
+    // Copyright del footer con el año actual
+    const fc = $('footerCopyright');
+    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium. Todos los derechos reservados.`;
 }
 
-// ============ VOICES ============
+// ============ VOCES (solo Google es-ES / es-US) ============
 function populateVoices() {
     voices = speechSynthesis.getVoices();
-    renderVoiceOptions();
-}
 
-function renderVoiceOptions() {
+    // Filtro: nombre contiene "Google" y el idioma es español de España o EE.UU.
+    googleVoices = voices.filter(v => {
+        const lang = v.lang.toLowerCase().replace('_', '-');
+        const esGoogle = /google/i.test(v.name);
+        return esGoogle && (lang === 'es-es' || lang === 'es-us');
+    });
+
+    // Respaldo: si no hay ninguna Google (p. ej. no es Chrome), mostrar
+    // cualquier voz española es-ES/es-US para que la app siga sirviendo.
+    let list = googleVoices;
+    let usingFallback = false;
+    if (list.length === 0) {
+        list = voices.filter(v => {
+            const lang = v.lang.toLowerCase().replace('_', '-');
+            return lang === 'es-es' || lang === 'es-us';
+        });
+        usingFallback = list.length > 0;
+    }
+
     const previous = voiceSelect.value;
     voiceSelect.innerHTML = '';
+    list.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = voices.indexOf(v);
+        const pais = v.lang.toLowerCase().includes('us') ? '🇺🇸 EE.UU.' : '🇪🇸 España';
+        opt.textContent = `${v.name.replace(/^Google\s*/i, '')} — ${pais}`;
+        voiceSelect.appendChild(opt);
+    });
 
-    if (piperAvailable) {
-        const og = document.createElement('optgroup');
-        og.label = '🎙️ Piper — servidor local';
-        piperVoices.forEach(name => {
-            const opt = document.createElement('option');
-            opt.value = 'piper:' + name;
-            opt.textContent = name;
-            og.appendChild(opt);
-        });
-        voiceSelect.appendChild(og);
-    }
-
-    if (piperWebReady) {
-        const og = document.createElement('optgroup');
-        og.label = '🌐 Piper — en el navegador';
-        PIPER_WEB_VOICES.forEach(v => {
-            const opt = document.createElement('option');
-            opt.value = 'web:' + v.id;
-            opt.textContent = v.label;
-            og.appendChild(opt);
-        });
-        voiceSelect.appendChild(og);
-    }
-
-    const spanish = voices.filter(v => v.lang.toLowerCase().startsWith('es'));
-    const list = spanish.length > 0 ? spanish : voices;
-    if (list.length > 0) {
-        const og = document.createElement('optgroup');
-        og.label = '💻 Voces del sistema';
-        list.forEach(v => {
-            const opt = document.createElement('option');
-            opt.value = 'sys:' + voices.indexOf(v);
-            opt.textContent = `${v.name} (${v.lang})${v.default ? ' ★' : ''}`;
-            og.appendChild(opt);
-        });
-        voiceSelect.appendChild(og);
+    const hint = $('voiceHint');
+    if (list.length === 0) {
+        const opt = document.createElement('option');
+        opt.textContent = 'No hay voces en español disponibles';
+        voiceSelect.appendChild(opt);
+        hint.textContent = 'Abre la app en Google Chrome para ver las voces de Google.';
+    } else if (usingFallback) {
+        hint.textContent = 'No se encontraron voces "Google". Mostrando otras voces en español del sistema.';
+    } else {
+        hint.textContent = `${list.length} ${list.length === 1 ? 'voz' : 'voces'} de Google en español.`;
     }
 
     if (previous && [...voiceSelect.options].some(o => o.value === previous)) {
         voiceSelect.value = previous;
     }
-    onVoiceChange();
 }
 
-function getSelectedSystemVoice() {
-    if (!voiceSelect.value.startsWith('sys:')) return null;
-    const idx = parseInt(voiceSelect.value.slice(4));
+function getSelectedVoice() {
+    const idx = parseInt(voiceSelect.value);
     return (!isNaN(idx) && voices[idx]) ? voices[idx] : null;
 }
 
-// Piper no soporta cambiar el tono: se desactiva ese control cuando está activo
-function onVoiceChange() {
-    const usingPiper = isPiperSelected() || isPiperWebSelected();
-    pitch.disabled = usingPiper;
-    pitch.parentElement.parentElement.style.opacity = usingPiper ? 0.45 : 1;
-    pitch.parentElement.parentElement.title = usingPiper ? 'El tono no aplica con voces Piper' : '';
+// ============ RESTABLECER VOZ ============
+function resetVoiceSettings() {
+    rate.value = DEFAULTS.rate;
+    pitch.value = DEFAULTS.pitch;
+    volume.value = DEFAULTS.volume;
+    rateVal.textContent = DEFAULTS.rate.toFixed(1) + 'x';
+    pitchVal.textContent = DEFAULTS.pitch.toFixed(1);
+    volVal.textContent = Math.round(DEFAULTS.volume * 100) + '%';
+    // Volver a la primera voz de la lista (la Google predeterminada)
+    if (voiceSelect.options.length > 0) voiceSelect.selectedIndex = 0;
+    showToast('Configuración de voz restablecida', 'success');
 }
-voiceSelect.addEventListener('change', onVoiceChange);
 
 // ============ SLIDERS ============
-rate.addEventListener('input', () => {
-    rateVal.textContent = parseFloat(rate.value).toFixed(1) + 'x';
-    if (piperPlaying && isPiperWebSelected()) ttsAudio.playbackRate = parseFloat(rate.value);
-});
+rate.addEventListener('input', () => rateVal.textContent = parseFloat(rate.value).toFixed(1) + 'x');
 pitch.addEventListener('input', () => pitchVal.textContent = parseFloat(pitch.value).toFixed(1));
-volume.addEventListener('input', () => {
-    volVal.textContent = Math.round(volume.value * 100) + '%';
-    ttsAudio.volume = parseFloat(volume.value);
-});
+volume.addEventListener('input', () => volVal.textContent = Math.round(volume.value * 100) + '%');
 
-// ============ CHAR COUNT ============
+// ============ CONTADOR ============
 editor.addEventListener('input', updateCharCount);
 function updateCharCount() {
     const text = editor.value;
@@ -1048,14 +1028,14 @@ function updateCharCount() {
     charInfo.textContent = `${chars.toLocaleString()} caracteres | ${words.toLocaleString()} palabras`;
 }
 
-// ============ STATUS ============
+// ============ ESTADO VISUAL ============
 function setStatus(msg, type) {
     statusMsg.textContent = msg;
     statusDot.className = 'dot' + (type ? ' ' + type : '');
     visualizer.classList.toggle('active', type === 'speaking' || type === 'recording');
 }
 
-// ============ SPEAK (punto de entrada) ============
+// ============ LECTURA ============
 function speak() {
     const text = editor.value.trim();
     if (!text) { showToast('Escribe algo primero', 'warning'); return; }
@@ -1070,103 +1050,18 @@ function speakSelection() {
 }
 
 function startSpeech(text) {
-    cancelPlayback();
+    speechSynthesis.cancel();
+    speechQueue = splitIntoChunks(text);
+    queueIndex = 0;
     isSpeaking = true;
     isPaused = false;
     btnSpeak.innerHTML = '🔁 Repetir';
     btnPause.innerHTML = '⏸️ Pausar';
-    if (isPiperSelected()) {
-        piperSpeak(text);
-    } else if (isPiperWebSelected()) {
-        piperWebSpeak(text);
-    } else {
-        sysSpeak(text);
-    }
-}
-
-// Detiene cualquier reproducción en curso (ambos motores) sin tocar la UI
-function cancelPlayback() {
-    speechSynthesis.cancel();
-    stopKeepAlive();
-    speechQueue = [];
-    queueIndex = 0;
-    ttsAudio.pause();
-    ttsAudio.onended = null;
-    ttsAudio.ontimeupdate = null;
-    ttsAudio.removeAttribute('src');
-    if (piperUrl) { URL.revokeObjectURL(piperUrl); piperUrl = null; }
-    piperPlaying = false;
-}
-
-// ---- Motor Piper ----
-async function piperSpeak(text) {
-    setStatus('⏳ Generando audio con Piper...', 'speaking');
-    try {
-        const blob = await piperSynthesize(text);
-        if (!isSpeaking) return;   // el usuario detuvo mientras se generaba
-
-        piperUrl = URL.createObjectURL(blob);
-        ttsAudio.src = piperUrl;
-        ttsAudio.volume = parseFloat(volume.value);
-        ttsAudio.onended = () => onSpeechFinished();
-        ttsAudio.ontimeupdate = () => {
-            if (ttsAudio.duration && isSpeaking && !isPaused) {
-                const pct = Math.round((ttsAudio.currentTime / ttsAudio.duration) * 100);
-                setStatus(`🔊 Leyendo (Piper)... ${pct}%`, 'speaking');
-            }
-        };
-        await ttsAudio.play();
-        piperPlaying = true;
-        setStatus('🔊 Leyendo (Piper)...', 'speaking');
-    } catch (e) {
-        console.error(e);
-        finishSpeechState();
-        setStatus('❌ Error');
-        showToast('No se pudo conectar con Piper. ¿Está corriendo el servidor?', 'error');
-        checkPiper();
-    }
-}
-
-// ---- Motor Piper web (WASM) ----
-// La velocidad se aplica con playbackRate (el navegador conserva el tono).
-async function piperWebSpeak(text) {
-    setStatus('⏳ Generando audio (Piper web)...', 'speaking');
-    try {
-        const blob = await piperWebSynthesize(text);
-        if (!isSpeaking) return;   // el usuario detuvo mientras se generaba
-
-        piperUrl = URL.createObjectURL(blob);
-        ttsAudio.src = piperUrl;
-        ttsAudio.volume = parseFloat(volume.value);
-        ttsAudio.playbackRate = parseFloat(rate.value);
-        ttsAudio.onended = () => onSpeechFinished();
-        ttsAudio.ontimeupdate = () => {
-            if (ttsAudio.duration && isSpeaking && !isPaused) {
-                const pct = Math.round((ttsAudio.currentTime / ttsAudio.duration) * 100);
-                setStatus(`🔊 Leyendo (Piper web)... ${pct}%`, 'speaking');
-            }
-        };
-        await ttsAudio.play();
-        piperPlaying = true;
-        setStatus('🔊 Leyendo (Piper web)...', 'speaking');
-    } catch (e) {
-        console.error(e);
-        finishSpeechState();
-        setStatus('❌ Error');
-        showToast('No se pudo generar el audio con Piper web. Revisa tu conexión.', 'error');
-    }
-}
-
-// ---- Motor del sistema (speechSynthesis) ----
-// Chrome corta speechSynthesis tras ~15 s con voces remotas. Solución doble:
-// fragmentar por oraciones + resume() periódico.
-function sysSpeak(text) {
-    speechQueue = splitIntoChunks(text);
-    queueIndex = 0;
     startKeepAlive();
     speakNextChunk();
 }
 
+// Chrome corta speechSynthesis tras ~15 s: fragmentar por oraciones + resume() periódico.
 function splitIntoChunks(text, maxLen = 200) {
     const sentences = text.match(/[^.!?…\n]+[.!?…]*\s*|\n+/g) || [text];
     const chunks = [];
@@ -1192,7 +1087,7 @@ function splitIntoChunks(text, maxLen = 200) {
 
 function makeUtterance(text) {
     const u = new SpeechSynthesisUtterance(text);
-    const voice = getSelectedSystemVoice();
+    const voice = getSelectedVoice();
     if (voice) {
         u.voice = voice;
         u.lang = voice.lang;
@@ -1220,13 +1115,12 @@ function speakNextChunk() {
     if (queueIndex >= speechQueue.length) { onSpeechFinished(); return; }
 
     const u = makeUtterance(speechQueue[queueIndex]);
-
     u.onstart = () => {
         const pct = Math.round((queueIndex / speechQueue.length) * 100);
         setStatus(`🔊 Leyendo... ${pct}% (${queueIndex + 1}/${speechQueue.length})`, 'speaking');
     };
     u.onend = () => {
-        if (!isSpeaking) return;   // se llamó a stop()
+        if (!isSpeaking) return;
         queueIndex++;
         speakNextChunk();
     };
@@ -1236,11 +1130,9 @@ function speakNextChunk() {
         setStatus('❌ Error de lectura');
         finishSpeechState();
     };
-
     speechSynthesis.speak(u);
 }
 
-// ---- Fin / pausa / detener (ambos motores) ----
 function onSpeechFinished() {
     finishSpeechState();
     setStatus('✅ Finalizado');
@@ -1253,8 +1145,6 @@ function finishSpeechState() {
     speechQueue = [];
     queueIndex = 0;
     stopKeepAlive();
-    piperPlaying = false;
-    if (piperUrl) { URL.revokeObjectURL(piperUrl); piperUrl = null; }
     btnSpeak.innerHTML = '▶️ Leer';
     btnPause.innerHTML = '⏸️ Pausar';
 }
@@ -1263,12 +1153,12 @@ function togglePause() {
     if (!isSpeaking) return;
     if (isPaused) {
         isPaused = false;
-        if (piperPlaying) ttsAudio.play(); else speechSynthesis.resume();
+        speechSynthesis.resume();
         btnPause.innerHTML = '⏸️ Pausar';
         setStatus('🔊 Leyendo...', 'speaking');
     } else {
         isPaused = true;
-        if (piperPlaying) ttsAudio.pause(); else speechSynthesis.pause();
+        speechSynthesis.pause();
         btnPause.innerHTML = '▶️ Reanudar';
         setStatus('⏸️ Pausado', 'paused');
     }
@@ -1276,44 +1166,152 @@ function togglePause() {
 
 function stop() {
     finishSpeechState();
-    cancelPlayback();
+    speechSynthesis.cancel();
     setStatus('⏹️ Detenido');
     if (isRecording) stopRecording();
 }
 
-// ============ SAVE TEXT ============
+// ============ CARPETAS (File System Access API) ============
+async function restoreFolders() {
+    if (!fsaSupported) {
+        const motivo = inCrossOriginFrame
+            ? 'Abre la página en su propia pestaña para usar carpetas'
+            : 'No compatible en este navegador (usa descargas)';
+        $('audioFolderHint').textContent = motivo;
+        $('textFolderHint').textContent = motivo;
+        return;
+    }
+    try {
+        const a = await dbGetHandle('audioDir');
+        if (a) { audioDirHandle = a; $('audioFolderHint').textContent = '📁 ' + a.name; }
+        const t = await dbGetHandle('textDir');
+        if (t) { textDirHandle = t; $('textFolderHint').textContent = '📁 ' + t.name; }
+    } catch (e) { console.warn('No se pudieron restaurar carpetas:', e); }
+}
+
+async function ensurePermission(handle, mode) {
+    const opts = { mode };
+    if ((await handle.queryPermission(opts)) === 'granted') return true;
+    if ((await handle.requestPermission(opts)) === 'granted') return true;
+    return false;
+}
+
+function folderUnavailableMsg() {
+    return inCrossOriginFrame
+        ? 'Las carpetas solo funcionan con la página abierta en su propia pestaña (no en vista previa). Publícala o ábrela directamente en Chrome.'
+        : 'Tu navegador no permite elegir carpetas. Se usarán descargas.';
+}
+
+async function pickAudioFolder() {
+    if (!fsaSupported) { showToast(folderUnavailableMsg(), 'warning'); return; }
+    try {
+        audioDirHandle = await window.showDirectoryPicker({ id: 'ttsAudio', mode: 'readwrite' });
+        await dbPutHandle('audioDir', audioDirHandle);
+        $('audioFolderHint').textContent = '📁 ' + audioDirHandle.name;
+        showToast('Carpeta de audios: ' + audioDirHandle.name, 'success');
+    } catch (e) {
+        if (e.name === 'AbortError') return;
+        if (e.name === 'SecurityError') { showToast(folderUnavailableMsg(), 'warning'); return; }
+        console.error(e); showToast('No se pudo elegir la carpeta', 'error');
+    }
+}
+
+async function pickTextFolder() {
+    if (!fsaSupported) { showToast(folderUnavailableMsg(), 'warning'); return; }
+    try {
+        textDirHandle = await window.showDirectoryPicker({ id: 'ttsText', mode: 'readwrite' });
+        await dbPutHandle('textDir', textDirHandle);
+        $('textFolderHint').textContent = '📁 ' + textDirHandle.name;
+        showToast('Carpeta de textos: ' + textDirHandle.name, 'success');
+    } catch (e) {
+        if (e.name === 'AbortError') return;
+        if (e.name === 'SecurityError') { showToast(folderUnavailableMsg(), 'warning'); return; }
+        console.error(e); showToast('No se pudo elegir la carpeta', 'error');
+    }
+}
+
+// Escribe un blob/texto en la carpeta indicada. Devuelve true si lo logró.
+async function writeToFolder(dirHandle, filename, data) {
+    if (!dirHandle) return false;
+    if (!(await ensurePermission(dirHandle, 'readwrite'))) return false;
+    const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(data);
+    await writable.close();
+    return true;
+}
+
+// Leer todos los .txt de la carpeta de textos y añadirlos a "Mis Textos"
+async function loadFromTextFolder() {
+    if (!fsaSupported) { showToast(folderUnavailableMsg(), 'warning'); return; }
+    if (!textDirHandle) { await pickTextFolder(); if (!textDirHandle) return; }
+    if (!(await ensurePermission(textDirHandle, 'read'))) { showToast('Permiso denegado', 'warning'); return; }
+
+    let count = 0;
+    try {
+        for await (const entry of textDirHandle.values()) {
+            if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.txt')) {
+                const file = await entry.getFile();
+                const content = await file.text();
+                const existing = savedTexts.find(t => t.name === entry.name);
+                if (existing) {
+                    existing.content = content;
+                    existing.date = new Date(file.lastModified).toISOString();
+                } else {
+                    savedTexts.unshift({
+                        id: Date.now() + count,
+                        name: entry.name,
+                        content,
+                        date: new Date(file.lastModified).toISOString()
+                    });
+                }
+                count++;
+            }
+        }
+        localStorage.setItem('tts_texts', JSON.stringify(savedTexts));
+        renderFileList();
+        updateCounts();
+        showToast(count > 0 ? `${count} archivo(s) .txt cargados` : 'No se encontraron archivos .txt', count > 0 ? 'success' : 'warning');
+    } catch (e) {
+        console.error(e);
+        showToast('Error al leer la carpeta', 'error');
+    }
+}
+
+// ============ GUARDAR TEXTO ============
 function saveText() {
     $('saveFilename').value = currentFilename.replace(/\.txt$/, '') + '_' + new Date().toISOString().slice(0, 10) + '.txt';
     openModal('saveModal');
     $('saveFilename').focus();
 }
 
-function confirmSaveText() {
+async function confirmSaveText() {
     let name = $('saveFilename').value.trim();
     if (!name) name = 'texto_' + Date.now() + '.txt';
     if (!name.endsWith('.txt')) name += '.txt';
 
-    // Si ya existe un texto con el mismo nombre, se sobrescribe en vez de duplicarse
     const existing = savedTexts.find(t => t.name === name);
     if (existing) {
         existing.content = editor.value;
         existing.date = new Date().toISOString();
     } else {
-        savedTexts.unshift({
-            id: Date.now(),
-            name,
-            content: editor.value,
-            date: new Date().toISOString()
-        });
+        savedTexts.unshift({ id: Date.now(), name, content: editor.value, date: new Date().toISOString() });
     }
     localStorage.setItem('tts_texts', JSON.stringify(savedTexts));
+
+    // Si hay carpeta de textos, guardar también ahí el archivo leído
+    let savedToFolder = false;
+    if (textDirHandle) {
+        try { savedToFolder = await writeToFolder(textDirHandle, name, editor.value); }
+        catch (e) { console.error('No se pudo guardar en la carpeta:', e); }
+    }
 
     currentFilename = name;
     updateTabName(name);
     closeModal('saveModal');
     renderFileList();
     updateCounts();
-    showToast((existing ? 'Texto actualizado: ' : 'Texto guardado: ') + name, 'success');
+    showToast((existing ? 'Texto actualizado' : 'Texto guardado') + (savedToFolder ? ' (también en carpeta)' : '') + ': ' + name, 'success');
 }
 
 function updateTabName(name) {
@@ -1321,7 +1319,7 @@ function updateTabName(name) {
     if (tab) tab.textContent = name;
 }
 
-// ============ OPEN FILE ============
+// ============ ABRIR ARCHIVO SUELTO ============
 function openFile(input) {
     const file = input.files[0];
     if (!file) return;
@@ -1338,7 +1336,7 @@ function openFile(input) {
     input.value = '';
 }
 
-// ============ LOAD SAVED TEXT ============
+// ============ TEXTOS GUARDADOS ============
 function loadSavedText(id) {
     const item = savedTexts.find(t => t.id === id);
     if (!item) return;
@@ -1376,89 +1374,24 @@ function downloadCurrentText() {
     showToast('Texto descargado', 'success');
 }
 
-// ============ EXPORT AUDIO ============
+// ============ EXPORTAR AUDIO ============
 function exportAudio() {
     const text = editor.value.trim();
     if (!text) { showToast('Escribe algo primero', 'warning'); return; }
-
-    const base = currentFilename.replace(/\.txt$/, '');
-    if (isPiperSelected()) {
-        $('audioModalInfo').innerHTML = 'El audio se generará directamente con <b>Piper</b> en formato WAV de alta calidad. No hace falta grabar nada.';
-        $('audioFilename').value = base + '.wav';
-    } else if (isPiperWebSelected()) {
-        $('audioModalInfo').innerHTML = 'El audio se generará con <b>Piper en el navegador</b> como WAV de alta calidad (a velocidad normal 1.0x). Si es la primera vez con esta voz, se descargará el modelo.';
-        $('audioFilename').value = base + '.wav';
+    $('audioFilename').value = currentFilename.replace(/\.txt$/, '') + '.webm';
+    const info = $('audioModalInfo');
+    if (audioDirHandle) {
+        info.innerHTML = `Se grabará el audio mientras se lee. El navegador te pedirá compartir una pestaña o pantalla: marca <b>"Compartir audio"</b>. El archivo se guardará en tu carpeta <b>${escapeHtml(audioDirHandle.name)}</b>.`;
     } else {
-        $('audioModalInfo').innerHTML = 'Se grabará el audio mientras se lee el texto. El navegador te pedirá compartir una pestaña o pantalla: marca la casilla <b>"Compartir audio"</b>. El archivo se guarda en formato WebM. <br><br>💡 <b>Consejo:</b> con el servidor Piper activo, la exportación es directa a WAV y sin grabar la pantalla.';
-        $('audioFilename').value = base + '.webm';
+        info.innerHTML = 'Se grabará el audio mientras se lee. El navegador te pedirá compartir una pestaña o pantalla: marca <b>"Compartir audio"</b>. Se descargará como WebM (elige una carpeta de audios para guardarlo ahí automáticamente).';
     }
     openModal('audioModal');
     $('audioFilename').focus();
 }
 
 async function confirmExportAudio() {
-    if (isPiperSelected()) {
-        await exportWithPiper(piperSynthesize, 'Piper');
-    } else if (isPiperWebSelected()) {
-        await exportWithPiper(piperWebSynthesize, 'Piper web');
-    } else {
-        await exportWithRecording();
-    }
-}
-
-// ---- Exportación directa a WAV (ambos motores Piper) ----
-async function exportWithPiper(synthesize, engineName) {
     let name = $('audioFilename').value.trim();
     if (!name) name = 'audio_' + Date.now();
-    name = name.replace(/\.(mp3|webm|ogg)$/i, '');
-    if (!name.endsWith('.wav')) name += '.wav';
-
-    closeModal('audioModal');
-    setStatus(`⏳ Generando WAV con ${engineName}...`, 'recording');
-
-    try {
-        const text = editor.value.trim();
-        const blob = await synthesize(text);
-
-        const item = {
-            id: Date.now(),
-            name,
-            size: (blob.size / 1024).toFixed(1) + ' KB',
-            date: new Date().toISOString()
-        };
-        try {
-            await dbPutAudio({ ...item, blob });
-            savedAudios.unshift(item);
-        } catch (e) {
-            console.error('No se pudo guardar en IndexedDB:', e);
-        }
-
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = name;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        renderAudioList();
-        updateCounts();
-        setStatus('✅ Audio exportado');
-        showToast('WAV exportado: ' + name, 'success');
-    } catch (e) {
-        console.error(e);
-        setStatus('❌ Error');
-        showToast(`No se pudo generar el audio con ${engineName}`, 'error');
-        if (engineName === 'Piper') checkPiper();
-    }
-}
-
-// ---- Exportación grabando el sistema (voces del navegador) ----
-async function exportWithRecording() {
-    let name = $('audioFilename').value.trim();
-    if (!name) name = 'audio_' + Date.now();
-    // MediaRecorder produce WebM/Opus; renombrarlo .mp3 crearía un archivo mal etiquetado
     name = name.replace(/\.(mp3|wav|ogg)$/i, '');
     if (!name.endsWith('.webm')) name += '.webm';
 
@@ -1472,15 +1405,12 @@ async function exportWithRecording() {
             display.getVideoTracks().forEach(t => t.stop());
             if (!audioTrack) {
                 display.getTracks().forEach(t => t.stop());
-                showToast('No se compartió el audio. Marca "Compartir audio" al elegir la pestaña.', 'warning');
+                showToast('No se compartió el audio. Marca "Compartir audio".', 'warning');
                 return;
             }
             stream = new MediaStream([audioTrack]);
         } catch (e) {
-            if (e.name === 'NotAllowedError') {
-                showToast('Grabación cancelada', 'warning');
-                return;
-            }
+            if (e.name === 'NotAllowedError') { showToast('Grabación cancelada', 'warning'); return; }
             stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             showToast('Grabando con micrófono (sube el volumen de los altavoces)', 'warning');
         }
@@ -1488,10 +1418,7 @@ async function exportWithRecording() {
         recordingStream = stream;
         mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
         audioChunks = [];
-
-        mediaRecorder.ondataavailable = (e) => {
-            if (e.data.size > 0) audioChunks.push(e.data);
-        };
+        mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
 
         mediaRecorder.onstop = async () => {
             const blob = new Blob(audioChunks, { type: 'audio/webm' });
@@ -1501,23 +1428,26 @@ async function exportWithRecording() {
                 size: (blob.size / 1024).toFixed(1) + ' KB',
                 date: new Date().toISOString()
             };
-
             try {
                 await dbPutAudio({ ...item, blob });
                 savedAudios.unshift(item);
             } catch (e) {
                 console.error('No se pudo guardar en IndexedDB:', e);
-                showToast('El audio se descargó pero no pudo guardarse en la lista', 'warning');
             }
 
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = name;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            // Guardar en la carpeta elegida, o descargar como respaldo
+            let savedToFolder = false;
+            if (audioDirHandle) {
+                try { savedToFolder = await writeToFolder(audioDirHandle, name, blob); }
+                catch (e) { console.error('No se pudo escribir en la carpeta de audios:', e); }
+            }
+            if (!savedToFolder) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = name;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
 
             isRecording = false;
             recordingStream?.getTracks().forEach(t => t.stop());
@@ -1525,15 +1455,13 @@ async function exportWithRecording() {
             renderAudioList();
             updateCounts();
             setStatus('✅ Audio exportado');
-            showToast('Audio exportado: ' + name, 'success');
+            showToast('Audio exportado' + (savedToFolder ? ' en ' + audioDirHandle.name : '') + ': ' + name, 'success');
         };
 
         mediaRecorder.start();
         isRecording = true;
         setStatus('🔴 Grabando audio...', 'recording');
-
         setTimeout(() => speak(), 300);
-
     } catch (err) {
         console.error(err);
         showToast('Error al grabar. Permite el acceso al audio.', 'error');
@@ -1545,12 +1473,10 @@ async function exportWithRecording() {
 }
 
 function stopRecording() {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
-    }
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
 }
 
-// ============ AUDIO LIST ============
+// ============ LISTA DE AUDIOS ============
 async function playAudio(id) {
     const item = await dbGetAudio(id);
     if (!item || !item.blob) { showToast('Audio no encontrado', 'error'); return; }
@@ -1567,11 +1493,8 @@ async function downloadAudio(id) {
     if (!item || !item.blob) { showToast('Audio no encontrado', 'error'); return; }
     const url = URL.createObjectURL(item.blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = item.name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    a.href = url; a.download = item.name;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
 }
 
@@ -1594,7 +1517,7 @@ async function clearAllAudio() {
     showToast('Todos los audios eliminados', 'success');
 }
 
-// ============ FILE LISTS ============
+// ============ RENDER LISTAS ============
 function renderFileList() {
     const container = $('fileList');
     if (savedTexts.length === 0) {
@@ -1634,29 +1557,24 @@ function updateCounts() {
     $('audioCount').textContent = savedAudios.length;
 }
 
-// ============ VIEW SWITCHING ============
+// ============ VISTAS ============
 function switchView(view) {
     document.querySelectorAll('.gh-htab').forEach(el => el.classList.remove('active'));
     document.querySelector(`[data-view="${view}"]`).classList.add('active');
-
     $('view-editor').style.display = view === 'editor' ? 'block' : 'none';
     $('view-files').style.display = view === 'files' ? 'block' : 'none';
     $('view-audio').style.display = view === 'audio' ? 'block' : 'none';
-
     if (view === 'files') renderFileList();
     if (view === 'audio') renderAudioList();
 }
 
-// ============ UTILITIES ============
+// ============ UTILIDADES ============
 function downloadFile(content, filename, mimeType) {
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
 }
 
@@ -1686,22 +1604,16 @@ function insertSample() {
     showToast('Texto de ejemplo insertado', 'success');
 }
 
-// ============ MODALS ============
+// ============ MODALES ============
 function openModal(id) { $(id).classList.add('show'); }
 function closeModal(id) { $(id).classList.remove('show'); }
-function anyModalOpen() {
-    return document.querySelector('.gh-modal-overlay.show');
-}
+function anyModalOpen() { return document.querySelector('.gh-modal-overlay.show'); }
 
-// Enter confirma el modal abierto
 $('saveFilename').addEventListener('keydown', e => { if (e.key === 'Enter') confirmSaveText(); });
 $('audioFilename').addEventListener('keydown', e => { if (e.key === 'Enter') confirmExportAudio(); });
 
-// Clic fuera del modal lo cierra
 document.querySelectorAll('.gh-modal-overlay').forEach(overlay => {
-    overlay.addEventListener('click', e => {
-        if (e.target === overlay) overlay.classList.remove('show');
-    });
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('show'); });
 });
 
 // ============ TOAST ============
@@ -1715,9 +1627,8 @@ function showToast(msg, type) {
     toastTimeout = setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
-// ============ KEYBOARD ============
+// ============ TECLADO ============
 document.addEventListener('keydown', (e) => {
-    // Escape: primero cierra el modal abierto; si no hay, detiene la lectura
     if (e.code === 'Escape') {
         const open = anyModalOpen();
         if (open) { open.classList.remove('show'); return; }
@@ -1729,12 +1640,11 @@ document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.key === 's') { e.preventDefault(); saveText(); }
 });
 
-// Avisar si se cierra la página mientras se graba
 window.addEventListener('beforeunload', (e) => {
     if (isRecording) { e.preventDefault(); e.returnValue = ''; }
 });
 
-// ============ START ============
+// ============ INICIO ============
 init();
 </script>
 
