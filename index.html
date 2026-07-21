@@ -422,6 +422,37 @@
         }
         .gh-textarea::placeholder { color: var(--text-muted); }
 
+        /* Capa del cursor: se muestra sobre el textarea al leer */
+        .gh-read-overlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            padding: 20px;
+            font-family: var(--font-mono);
+            font-size: 14px;
+            line-height: 1.7;
+            color: var(--text);
+            background: var(--bg);
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            cursor: default;
+        }
+        .gh-read-overlay.active { display: block; }
+        .gh-read-overlay .rc, .gh-read-overlay .w { transition: background 0.1s; border-radius: 3px; }
+        /* Respaldo por frase (voces que no marcan palabras) — tenue */
+        .gh-read-overlay .rc.hl {
+            background: rgba(9, 105, 218, 0.10);
+        }
+        /* Palabra actual — marcada */
+        .gh-read-overlay .w.hl {
+            background: rgba(9, 105, 218, 0.22);
+            box-shadow: 0 0 0 2px rgba(9, 105, 218, 0.22);
+            color: var(--text);
+            font-weight: 700;
+        }
+
         .gh-statusbar {
             display: flex;
             align-items: center;
@@ -782,6 +813,7 @@ Este editor te permite:
 • Ajustar velocidad, tono y volumen
 
 Prueba escribiendo algo y presiona el botón ▶ para escucharlo.</textarea>
+                    <div id="readOverlay" class="gh-read-overlay" aria-hidden="true"></div>
                 </div>
                 <div class="gh-statusbar">
                     <span><span class="dot" id="statusDot"></span><span id="statusMsg">Listo</span><span class="gh-visualizer" id="visualizer">
@@ -1104,7 +1136,7 @@ async function init() {
 
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
-    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v5.4. Todos los derechos reservados.`;
+    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v5.6. Todos los derechos reservados.`;
 }
 
 // ============ ÁREA DE ADMINISTRACIÓN (email + contraseña portero) ============
@@ -1402,24 +1434,56 @@ async function gcloudSynthesize(text) {
 }
 
 let cloudAudioEl = null;
+let cloudPlaying = false;      // ¿reproduciendo audio de Google Cloud?
+let cloudChunks = [];          // fragmentos para el cursor en modo nube
+let cloudCum = [];             // longitudes acumuladas de caracteres
+let cloudTotalChars = 1;
 
 // Leer con voz de Google Cloud (reproduce el MP3 en el navegador)
 async function speakCloud(text) {
     setStatus('⏳ Generando voz de alta calidad...', 'speaking');
     $('btnSpeak').disabled = true;
     try {
+        const clean = cleanForSpeech(text);
+        const chunks = splitIntoChunks(clean);
         const blob = await gcloudSynthesize(text);
         const url = URL.createObjectURL(blob);
         if (cloudAudioEl) { cloudAudioEl.pause(); }
         cloudAudioEl = new Audio(url);
-        cloudAudioEl.onended = () => { setStatus('✅ Finalizado'); URL.revokeObjectURL(url); };
-        cloudAudioEl.onerror = () => { setStatus('⚠️ Error al reproducir'); };
+
+        // Preparar datos del cursor (posición estimada por tiempo de audio)
+        cloudChunks = chunks;
+        cloudCum = [];
+        let acc = 0;
+        chunks.forEach(c => { acc += c.length + 1; cloudCum.push(acc); });
+        cloudTotalChars = acc || 1;
+        showReadOverlay(chunks);
+        cloudPlaying = true;
+        btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
+
+        cloudAudioEl.ontimeupdate = () => {
+            if (!cloudAudioEl.duration) return;
+            const pos = (cloudAudioEl.currentTime / cloudAudioEl.duration) * cloudTotalChars;
+            highlightWordGlobal(pos);
+        };
+        cloudAudioEl.onended = () => {
+            cloudPlaying = false;
+            hideReadOverlay();
+            setStatus('✅ Finalizado');
+            URL.revokeObjectURL(url);
+        };
+        cloudAudioEl.onerror = () => {
+            cloudPlaying = false;
+            hideReadOverlay();
+            setStatus('⚠️ Error al reproducir');
+        };
         setStatus('🔊 Leyendo (Google Cloud)...', 'speaking');
         cloudAudioEl.play();
     } catch (e) {
         console.error(e);
         showToast('Error de Google Cloud: ' + (e.message || e), 'error');
         setStatus('Listo');
+        hideReadOverlay();
     } finally {
         $('btnSpeak').disabled = false;
     }
@@ -1497,33 +1561,56 @@ async function generateMp3() {
     }
 }
 
-// ============ VOCES (solo Google es-ES / es-US) ============
+// ============ VOCES ============
+// Mapea el código de idioma a un país legible
+function paisDeLang(lang) {
+    const l = (lang || '').toLowerCase().replace('_', '-');
+    if (l.includes('mx')) return '🇲🇽 México';
+    if (l.includes('us')) return '🇺🇸 EE.UU.';
+    if (l.includes('ar')) return '🇦🇷 Argentina';
+    if (l.includes('co')) return '🇨🇴 Colombia';
+    if (l.includes('cl')) return '🇨🇱 Chile';
+    if (l.includes('es')) return '🇪🇸 España';
+    return l;
+}
+
+// Elige la voz GRATIS predeterminada: preferir Google es-ES, luego cualquier español
+function pickDefaultFree(list) {
+    const esES = v => v.lang.toLowerCase().replace('_', '-') === 'es-es';
+    return list.find(v => /google/i.test(v.name) && esES(v))
+        || list.find(v => /google/i.test(v.name))
+        || list.find(esES)
+        || list[0] || null;
+}
+
 function populateVoices() {
     voices = speechSynthesis.getVoices();
 
-    // Filtro: nombre contiene "Google" y el idioma es español de España o EE.UU.
-    googleVoices = voices.filter(v => {
-        const lang = v.lang.toLowerCase().replace('_', '-');
-        const esGoogle = /google/i.test(v.name);
-        return esGoogle && (lang === 'es-es' || lang === 'es-us');
+    // TODAS las voces en español del navegador (no solo "Google", no solo es-ES/es-US)
+    let list = voices.filter(v => v.lang.toLowerCase().replace('_', '-').startsWith('es'));
+    // Ordenar: las Google primero (mejor calidad), luego alfabético
+    list.sort((a, b) => {
+        const ga = /google/i.test(a.name) ? 0 : 1;
+        const gb = /google/i.test(b.name) ? 0 : 1;
+        if (ga !== gb) return ga - gb;
+        return a.name.localeCompare(b.name);
     });
-
-    // Respaldo: si no hay ninguna Google (p. ej. no es Chrome), mostrar
-    // cualquier voz española es-ES/es-US para que la app siga sirviendo.
-    let list = googleVoices;
-    let usingFallback = false;
-    if (list.length === 0) {
-        list = voices.filter(v => {
-            const lang = v.lang.toLowerCase().replace('_', '-');
-            return lang === 'es-es' || lang === 'es-us';
-        });
-        usingFallback = list.length > 0;
-    }
 
     const previous = voiceSelect.value;
     voiceSelect.innerHTML = '';
 
-    // Primero, las voces de Google Cloud, separadas por tipo con su precio
+    // Primero, las voces del navegador (GRATIS) — es la opción por defecto
+    const grpNav = document.createElement('optgroup');
+    grpNav.label = '🔊 Español gratis (navegador · solo lectura)';
+    list.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = String(voices.indexOf(v));
+        opt.textContent = `${v.name.replace(/^Google\s*/i, '')} — ${paisDeLang(v.lang)}`;
+        grpNav.appendChild(opt);
+    });
+    if (list.length > 0) voiceSelect.appendChild(grpNav);
+
+    // Luego, las voces de Google Cloud, separadas por tipo con su precio
     if (gcloudVoices.length > 0) {
         const waveNet  = gcloudVoices.filter(v => /Wavenet/i.test(v.name));
         const neural2  = gcloudVoices.filter(v => /Neural2/i.test(v.name));
@@ -1558,18 +1645,6 @@ function populateVoices() {
         agregarGrupo('☁️ Otras voces Cloud — MP3', otras);
     }
 
-    // Luego, las voces del navegador
-    const grpNav = document.createElement('optgroup');
-    grpNav.label = '🔊 Navegador (solo lectura)';
-    list.forEach(v => {
-        const opt = document.createElement('option');
-        opt.value = voices.indexOf(v);
-        const pais = v.lang.toLowerCase().includes('us') ? '🇺🇸 EE.UU.' : '🇪🇸 España';
-        opt.textContent = `${v.name.replace(/^Google\s*/i, '')} — ${pais}`;
-        grpNav.appendChild(opt);
-    });
-    if (list.length > 0) voiceSelect.appendChild(grpNav);
-
     const hint = $('voiceHint');
     if (list.length === 0 && gcloudVoices.length === 0) {
         const opt = document.createElement('option');
@@ -1577,15 +1652,17 @@ function populateVoices() {
         voiceSelect.appendChild(opt);
         hint.textContent = 'Abre la app en Google Chrome, o conecta Google Cloud.';
     } else if (gcloudVoices.length > 0) {
-        hint.textContent = 'Las voces ☁️ leen y generan MP3. Las 🔊 solo leen.';
-    } else if (usingFallback) {
-        hint.textContent = 'Mostrando voces en español del sistema.';
+        hint.textContent = 'Predeterminada: voz gratis. Las ☁️ leen y generan MP3.';
     } else {
-        hint.textContent = `${list.length} ${list.length === 1 ? 'voz' : 'voces'} de Google en español.`;
+        hint.textContent = `${list.length} ${list.length === 1 ? 'voz' : 'voces'} en español disponibles.`;
     }
 
+    // Selección: conservar la previa si sigue válida; si no, la voz GRATIS por defecto
     if (previous && [...voiceSelect.options].some(o => o.value === previous)) {
         voiceSelect.value = previous;
+    } else {
+        const dv = pickDefaultFree(list);
+        if (dv) voiceSelect.value = String(voices.indexOf(dv));
     }
 }
 
@@ -1667,6 +1744,124 @@ function cleanForSpeech(text) {
         .trim();
 }
 
+// ============ CURSOR / RESALTADO DE LECTURA ============
+function showReadOverlay(chunks) {
+    const ov = $('readOverlay');
+    if (!ov) return;
+    ov.innerHTML = '';
+    let global = 0;
+    chunks.forEach((chunk, ci) => {
+        const chunkSpan = document.createElement('span');
+        chunkSpan.className = 'rc';
+        chunkSpan.dataset.i = ci;
+        // Trocear el fragmento en palabras y espacios, envolviendo cada palabra
+        const re = /(\s+|[^\s]+)/g;
+        let m;
+        while ((m = re.exec(chunk)) !== null) {
+            const tok = m[0];
+            if (/^\s+$/.test(tok)) {
+                chunkSpan.appendChild(document.createTextNode(tok));
+            } else {
+                const w = document.createElement('span');
+                w.className = 'w';
+                w.dataset.ci = ci;              // fragmento
+                w.dataset.ls = m.index;         // inicio dentro del fragmento
+                w.dataset.le = m.index + tok.length;
+                w.dataset.gs = global + m.index; // inicio global (para la nube)
+                w.dataset.ge = global + m.index + tok.length;
+                w.textContent = tok;
+                chunkSpan.appendChild(w);
+            }
+        }
+        chunkSpan.appendChild(document.createTextNode(' '));
+        ov.appendChild(chunkSpan);
+        global += chunk.length + 1;             // coherente con cloudCum
+    });
+    ov.scrollTop = 0;
+    ov.classList.add('active');
+}
+
+// Resaltado por FRAGMENTO (respaldo cuando la voz no marca palabras)
+function highlightChunk(i) {
+    const ov = $('readOverlay');
+    if (!ov || !ov.classList.contains('active')) return;
+    ov.querySelectorAll('.rc.hl, .w.hl').forEach(el => el.classList.remove('hl'));
+    const el = ov.querySelector('.rc[data-i="' + i + '"]');
+    if (el) {
+        el.classList.add('hl');
+        const top = el.offsetTop - ov.clientHeight / 2;
+        ov.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    }
+}
+
+function clearChunkHl() {
+    const ov = $('readOverlay');
+    if (ov) ov.querySelectorAll('.rc.hl').forEach(el => el.classList.remove('hl'));
+}
+
+// Resaltar una palabra concreta (elemento) y centrarla
+function highlightWordEl(el) {
+    const ov = $('readOverlay');
+    if (!ov || !el) return;
+    ov.querySelectorAll('.w.hl').forEach(e => e.classList.remove('hl'));
+    el.classList.add('hl');
+    const top = el.offsetTop - ov.clientHeight / 2;
+    ov.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+}
+
+// Navegador: palabra por offset dentro del fragmento (evento onboundary)
+function highlightWordLocal(chunkIndex, localIndex) {
+    const ov = $('readOverlay');
+    if (!ov || !ov.classList.contains('active')) return;
+    const words = ov.querySelectorAll('.w[data-ci="' + chunkIndex + '"]');
+    let target = null;
+    for (const w of words) {
+        const ls = +w.dataset.ls, le = +w.dataset.le;
+        if (localIndex >= ls && localIndex < le) { target = w; break; }
+        if (ls > localIndex) break;
+        target = w;
+    }
+    highlightWordEl(target || words[0]);
+}
+
+// Nube: palabra por posición global estimada con el tiempo del audio
+function highlightWordGlobal(pos) {
+    const ov = $('readOverlay');
+    if (!ov || !ov.classList.contains('active')) return;
+    const words = ov.querySelectorAll('.w');
+    let target = null;
+    for (const w of words) {
+        const gs = +w.dataset.gs, ge = +w.dataset.ge;
+        if (pos >= gs && pos < ge) { target = w; break; }
+        if (gs > pos) break;
+        target = w;
+    }
+    if (target) highlightWordEl(target);
+}
+
+function hideReadOverlay() {
+    const ov = $('readOverlay');
+    if (!ov) return;
+    ov.classList.remove('active');
+    ov.innerHTML = '';
+}
+
+// ---- utilidades del cursor en modo nube (audio único, posición por tiempo) ----
+function currentCloudChunk() {
+    if (!cloudAudioEl || !cloudAudioEl.duration) return 0;
+    const pos = (cloudAudioEl.currentTime / cloudAudioEl.duration) * cloudTotalChars;
+    const i = cloudCum.findIndex(end => pos < end);
+    return i < 0 ? cloudChunks.length - 1 : i;
+}
+
+function seekCloudToChunk(i) {
+    if (!cloudAudioEl || !cloudAudioEl.duration) return;
+    i = Math.max(0, Math.min(cloudChunks.length - 1, i));
+    const startChars = i === 0 ? 0 : cloudCum[i - 1];
+    cloudAudioEl.currentTime = Math.max(0, (startChars / cloudTotalChars) * cloudAudioEl.duration);
+    highlightWordGlobal(startChars);
+}
+
 function startSpeech(text) {
     speechSynthesis.cancel();
     speechQueue = splitIntoChunks(cleanForSpeech(text));
@@ -1674,7 +1869,8 @@ function startSpeech(text) {
     isSpeaking = true;
     isPaused = false;
     btnSpeak.innerHTML = '<span class="pic">🔁</span> Repetir';
-    btnPause.innerHTML = '<span class="pic">⏸</span>';
+    btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
+    showReadOverlay(speechQueue);
     startKeepAlive();
     speakNextChunk();
 }
@@ -1700,7 +1896,7 @@ function splitIntoChunks(text, maxLen = 200) {
         }
     }
     if (current.trim()) chunks.push(current.trim());
-    return chunks;
+    return chunks.filter(c => c.length > 0);
 }
 
 function makeUtterance(text) {
@@ -1733,9 +1929,17 @@ function speakNextChunk() {
     if (queueIndex >= speechQueue.length) { onSpeechFinished(); return; }
 
     const u = makeUtterance(speechQueue[queueIndex]);
+    let wordMode = false;   // ¿esta voz marca palabras?
     u.onstart = () => {
+        wordMode = false;
+        highlightChunk(queueIndex);   // de entrada, resalta la frase (respaldo)
         const pct = Math.round((queueIndex / speechQueue.length) * 100);
         setStatus(`🔊 Leyendo... ${pct}% (${queueIndex + 1}/${speechQueue.length})`, 'speaking');
+    };
+    u.onboundary = (e) => {
+        if (e.name && e.name !== 'word') return;   // solo límites de palabra
+        if (!wordMode) { wordMode = true; clearChunkHl(); }  // pasar a modo palabra
+        highlightWordLocal(queueIndex, e.charIndex || 0);
     };
     u.onend = () => {
         if (!isSpeaking) return;
@@ -1762,11 +1966,25 @@ function finishSpeechState() {
     speechQueue = [];
     queueIndex = 0;
     stopKeepAlive();
+    hideReadOverlay();
     btnSpeak.innerHTML = '<span class="pic">▶</span> Leer';
     btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
 }
 
 function togglePause() {
+    // Modo Google Cloud (audio)
+    if (cloudPlaying && cloudAudioEl) {
+        if (cloudAudioEl.paused) {
+            cloudAudioEl.play();
+            btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
+            setStatus('🔊 Leyendo (Google Cloud)...', 'speaking');
+        } else {
+            cloudAudioEl.pause();
+            btnPause.innerHTML = '<span class="pic">▶</span> Reanudar';
+            setStatus('⏸️ Pausado', 'paused');
+        }
+        return;
+    }
     if (!isSpeaking) return;
     if (isPaused) {
         isPaused = false;
@@ -1785,19 +2003,23 @@ function stop() {
     finishSpeechState();
     speechSynthesis.cancel();
     if (cloudAudioEl) { cloudAudioEl.pause(); cloudAudioEl.currentTime = 0; }
+    cloudPlaying = false;
+    hideReadOverlay();
     setStatus('⏹️ Detenido');
 }
 
-// Retroceder: salta ~2 fragmentos atrás en la lectura del navegador
+// Retroceder un fragmento (nube) o ~3 (navegador)
 function skipBack() {
+    if (cloudPlaying && cloudAudioEl) { seekCloudToChunk(currentCloudChunk() - 1); return; }
     if (!isSpeaking) return;
     queueIndex = Math.max(0, queueIndex - 3);
     speechSynthesis.cancel();
     speakNextChunk();
 }
 
-// Avanzar: salta ~2 fragmentos adelante
+// Avanzar un fragmento (nube o navegador)
 function skipForward() {
+    if (cloudPlaying && cloudAudioEl) { seekCloudToChunk(currentCloudChunk() + 1); return; }
     if (!isSpeaking) return;
     queueIndex = Math.min(speechQueue.length, queueIndex + 1);
     speechSynthesis.cancel();
