@@ -120,6 +120,26 @@
             font-size: 13px;
             color: var(--text-secondary);
         }
+        .gh-admin-page {
+            max-width: 1100px;
+            margin: 0 auto 16px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-top: 3px solid var(--accent);
+            padding: 24px;
+        }
+        .gh-admin-page h2 { font-size: 1.6rem; }
+        .gh-admin-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+        }
+        .gh-admin-card {
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            background: var(--bg-secondary);
+        }
         .gh-footer .gh-foot-name {
             font-weight: 600;
             color: var(--text);
@@ -847,13 +867,14 @@ Prueba escribiendo algo y presiona el botón ▶ para escucharlo.</textarea>
 
 </div>
 
-<!-- ===== MODAL ÁREA DE ADMIN ===== -->
-<div class="gh-modal-overlay" id="adminModal">
-    <div class="gh-modal" style="max-width:440px">
-        <div class="gh-modal-header">🔒 Área de administración</div>
+<!-- ===== PÁGINA ÁREA DE ADMIN ===== -->
+<div id="view-admin" style="display:none">
+    <div class="gh-admin-page">
+        <button class="gh-btn" style="margin-bottom:16px" onclick="switchView('editor')">← Volver al editor</button>
+        <h2 style="font-family:'Cormorant Garamond',Georgia,serif;font-weight:500;letter-spacing:.04em;margin-bottom:4px">🔒 Área de administración</h2>
 
         <!-- Login de admin -->
-        <div class="gh-modal-body" id="adminLogin">
+        <div id="adminLogin" style="max-width:380px;margin-top:20px">
             <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Introduce tus credenciales de administrador.</p>
             <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px">Email</label>
             <input type="email" id="adminEmail" autocomplete="off" placeholder="correo@ejemplo.com"
@@ -862,42 +883,55 @@ Prueba escribiendo algo y presiona el botón ▶ para escucharlo.</textarea>
             <input type="password" id="adminPass" autocomplete="off" placeholder="••••••••"
                 style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:var(--radius);font-size:13px">
             <div id="adminError" style="font-size:12px;color:var(--danger);min-height:18px;margin-top:8px"></div>
+            <button class="gh-btn gh-btn-primary" id="adminLoginBtn" style="margin-top:6px" onclick="adminSignIn()">Entrar</button>
         </div>
 
         <!-- Contenido del admin (oculto hasta iniciar sesión) -->
-        <div class="gh-modal-body" id="adminContent" style="display:none">
-            <!-- Google Cloud -->
-            <div style="margin-bottom:18px">
-                <div style="font-weight:600;font-size:14px;margin-bottom:8px">☁️ Google Cloud (voces + MP3)</div>
-                <div id="gcloudStatus" style="font-size:12px;margin-bottom:8px;color:var(--text-secondary)">
-                    Sin conectar. Pega tu clave para activar voces de alta calidad y descarga MP3.
+        <div id="adminContent" style="display:none;margin-top:20px">
+            <div class="gh-admin-grid">
+                <!-- Google Cloud -->
+                <div class="gh-admin-card">
+                    <div style="font-weight:600;font-size:14px;margin-bottom:8px">☁️ Google Cloud (voces + MP3)</div>
+                    <div id="gcloudStatus" style="font-size:12px;margin-bottom:8px;color:var(--text-secondary)">
+                        Sin conectar. Pega tu clave para activar voces de alta calidad y descarga MP3.
+                    </div>
+                    <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px">Clave de API</label>
+                    <input type="password" id="gcloudKey" placeholder="AIza..." autocomplete="off"
+                        style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-family:var(--font-mono);font-size:12px">
+                    <div style="display:flex;gap:6px;margin-top:8px">
+                        <button class="gh-btn gh-btn-primary" style="flex:1" onclick="saveGcloudKey()">Conectar</button>
+                        <button class="gh-btn" onclick="clearGcloudKey()" title="Olvidar la clave">Olvidar</button>
+                    </div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5">
+                        La clave se guarda solo en este navegador. Restríngela a tu dominio en Google Cloud.
+                    </div>
                 </div>
-                <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px">Clave de API</label>
-                <input type="password" id="gcloudKey" placeholder="AIza..." autocomplete="off"
-                    style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-family:var(--font-mono);font-size:12px">
-                <div style="display:flex;gap:6px;margin-top:8px">
-                    <button class="gh-btn gh-btn-primary" style="flex:1" onclick="saveGcloudKey()">Conectar</button>
-                    <button class="gh-btn" onclick="clearGcloudKey()" title="Olvidar la clave">Olvidar</button>
+
+                <!-- Carpeta de descargas -->
+                <div class="gh-admin-card">
+                    <div style="font-weight:600;font-size:14px;margin-bottom:8px">📁 Carpeta para los MP3</div>
+                    <div id="folderStatus" style="font-size:12px;margin-bottom:8px;color:var(--text-secondary)">
+                        Sin carpeta fija. Cada MP3 te preguntará dónde guardarlo.
+                    </div>
+                    <div style="display:flex;gap:6px">
+                        <button class="gh-btn gh-btn-primary" style="flex:1" onclick="chooseMp3Folder()">Elegir carpeta</button>
+                        <button class="gh-btn" onclick="clearMp3Folder()" title="Quitar carpeta fija">Quitar</button>
+                    </div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5">
+                        Al elegir una carpeta, los MP3 se guardarán ahí por defecto (solo Chrome/Edge de escritorio).
+                    </div>
                 </div>
-                <div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5">
-                    La clave se guarda solo en este navegador. Restríngela a tu dominio en Google Cloud.
+
+                <!-- Contador de caracteres -->
+                <div class="gh-admin-card">
+                    <div style="font-weight:600;font-size:14px;margin-bottom:8px">📊 Caracteres procesados</div>
+                    <div id="usageBox" style="font-size:13px;line-height:1.9"></div>
+                    <button class="gh-btn" style="margin-top:10px;font-size:12px" onclick="resetUsage()">↺ Reiniciar contador del mes</button>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5">
+                        Conteo local aproximado, para tu control. El oficial está en Google Cloud Console.
+                    </div>
                 </div>
             </div>
-
-            <!-- Contador de caracteres -->
-            <div style="border-top:1px solid var(--border);padding-top:16px">
-                <div style="font-weight:600;font-size:14px;margin-bottom:8px">📊 Caracteres procesados</div>
-                <div id="usageBox" style="font-size:13px;line-height:1.9"></div>
-                <button class="gh-btn" style="margin-top:10px;font-size:12px" onclick="resetUsage()">↺ Reiniciar contador del mes</button>
-                <div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5">
-                    Conteo local aproximado, para tu control. El oficial está en Google Cloud Console.
-                </div>
-            </div>
-        </div>
-
-        <div class="gh-modal-footer">
-            <button class="gh-btn" onclick="closeModal('adminModal')">Cerrar</button>
-            <button class="gh-btn gh-btn-primary" id="adminLoginBtn" onclick="adminSignIn()">Entrar</button>
         </div>
     </div>
 </div>
@@ -1066,10 +1100,11 @@ async function init() {
         verifyGcloud();
     }
     updateUsageMini();
+    refreshFolderStatus();
 
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
-    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v5.3. Todos los derechos reservados.`;
+    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v5.4. Todos los derechos reservados.`;
 }
 
 // ============ ÁREA DE ADMINISTRACIÓN (email + contraseña portero) ============
@@ -1093,8 +1128,8 @@ function openAdmin() {
         $('adminLoginBtn').style.display = 'inline-block';
         $('adminError').textContent = '';
     }
-    openModal('adminModal');
-    if (sessionStorage.getItem('lectorium_admin') !== '1') $('adminEmail')?.focus();
+    switchView('admin');
+    if (sessionStorage.getItem('lectorium_admin') !== '1') setTimeout(() => $('adminEmail')?.focus(), 50);
 }
 
 async function adminSignIn() {
@@ -1119,6 +1154,7 @@ function showAdminContent() {
     $('adminLoginBtn').style.display = 'none';
     if (gcloudKey) $('gcloudKey').value = gcloudKey;
     renderUsage();
+    refreshFolderStatus();
 }
 
 // ---- Contador de caracteres procesados (local) ----
@@ -1172,6 +1208,70 @@ function resetUsage() {
     localStorage.setItem('lectorium_usage', JSON.stringify(d));
     renderUsage(); updateUsageMini();
     showToast('Contador del mes reiniciado', 'success');
+}
+
+// ---- Carpeta por defecto para los MP3 (File System Access API) ----
+let mp3DirHandle = null;
+
+async function chooseMp3Folder() {
+    if (!('showDirectoryPicker' in window)) {
+        showToast('Tu navegador no permite elegir carpeta. Usa Chrome o Edge de escritorio.', 'warning');
+        return;
+    }
+    try {
+        const dir = await window.showDirectoryPicker({ mode: 'readwrite' });
+        mp3DirHandle = dir;
+        await dbPutHandle('mp3dir', dir);
+        localStorage.setItem('mp3dir_name', dir.name);
+        refreshFolderStatus();
+        showToast('Carpeta elegida: ' + dir.name, 'success');
+    } catch (e) {
+        if (e.name !== 'AbortError') showToast('No se pudo elegir la carpeta', 'error');
+    }
+}
+
+async function clearMp3Folder() {
+    mp3DirHandle = null;
+    try { await dbPutHandle('mp3dir', null); } catch (e) {}
+    localStorage.removeItem('mp3dir_name');
+    refreshFolderStatus();
+    showToast('Carpeta fija quitada', 'success');
+}
+
+function refreshFolderStatus() {
+    const el = $('folderStatus');
+    if (!el) return;
+    const name = localStorage.getItem('mp3dir_name');
+    if (name) {
+        el.innerHTML = `📂 Carpeta actual: <b>${escapeHtml(name)}</b>. Los MP3 se guardarán ahí.`;
+        el.style.color = 'var(--success)';
+    } else {
+        el.textContent = 'Sin carpeta fija. Cada MP3 te preguntará dónde guardarlo.';
+        el.style.color = 'var(--text-secondary)';
+    }
+}
+
+// Recuperar el handle de la carpeta guardada y comprobar permiso
+async function getMp3Dir() {
+    if (!mp3DirHandle) {
+        try { mp3DirHandle = await dbGetHandle('mp3dir'); } catch (e) { mp3DirHandle = null; }
+    }
+    if (!mp3DirHandle) return null;
+    // Verificar/pedir permiso de escritura
+    const opts = { mode: 'readwrite' };
+    if ((await mp3DirHandle.queryPermission(opts)) === 'granted') return mp3DirHandle;
+    if ((await mp3DirHandle.requestPermission(opts)) === 'granted') return mp3DirHandle;
+    return null;
+}
+
+// Pedir un nombre de archivo (obliga a nombrar)
+function askFileName(suggested) {
+    let name = prompt('Nombre del archivo MP3:', suggested);
+    if (name === null) return null;            // canceló
+    name = name.trim();
+    if (!name) name = suggested;
+    if (!/\.mp3$/i.test(name)) name += '.mp3';
+    return name.replace(/[\\/:*?"<>|]/g, '_');  // limpiar caracteres inválidos
 }
 
 // ============ GOOGLE CLOUD TTS (voces WaveNet + MP3) ============
@@ -1332,16 +1432,41 @@ async function generateMp3() {
     if (!gcloudKey) { showToast('Conecta tu clave de Google Cloud primero', 'warning'); return; }
     if (!selectedIsCloud()) { showToast('Elige una voz de Google Cloud (marcadas con ☁️)', 'warning'); return; }
 
+    const suggested = (currentFilename.replace(/\.txt$/, '') || 'audio') + '.mp3';
+
+    // 1) Si hay carpeta fija, obliga a nombrar y guarda directo ahí
+    const dir = await getMp3Dir();
+    if (dir) {
+        const name = askFileName(suggested);
+        if (!name) { setStatus('Listo'); return; }   // canceló el nombre
+        $('btnGenerate').disabled = true;
+        setStatus('⏳ Generando MP3 con Google Cloud...', 'recording');
+        try {
+            const blob = await gcloudSynthesize(text);
+            const fh = await dir.getFileHandle(name, { create: true });
+            const w = await fh.createWritable();
+            await w.write(blob); await w.close();
+            setStatus('✅ MP3 guardado');
+            showToast(`✅ Guardado en tu carpeta: ${name}`, 'success');
+        } catch (e) {
+            console.error(e);
+            showToast('Error al guardar: ' + (e.message || e), 'error');
+            setStatus('Listo');
+        } finally {
+            $('btnGenerate').disabled = false;
+        }
+        return;
+    }
+
+    // 2) Sin carpeta fija: usar "Guardar como" (ya pide nombre) o descarga con nombre
     $('btnGenerate').disabled = true;
     setStatus('⏳ Generando MP3 con Google Cloud...', 'recording');
     try {
         const blob = await gcloudSynthesize(text);
-        const name = (currentFilename.replace(/\.txt$/, '') || 'audio') + '.mp3';
-        // Guardar con "Guardar como" si el navegador lo permite; si no, descarga normal
         if ('showSaveFilePicker' in window) {
             try {
                 const handle = await window.showSaveFilePicker({
-                    suggestedName: name,
+                    suggestedName: suggested,
                     types: [{ description: 'Audio MP3', accept: { 'audio/mpeg': ['.mp3'] } }]
                 });
                 const w = await handle.createWritable();
@@ -1353,6 +1478,9 @@ async function generateMp3() {
                 if (e.name === 'AbortError') { setStatus('Listo'); return; }
             }
         }
+        // Respaldo (navegadores sin File System Access): obliga a nombrar con prompt
+        const name = askFileName(suggested);
+        if (!name) { setStatus('Listo'); return; }
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url; a.download = name;
@@ -1524,6 +1652,9 @@ function cleanForSpeech(text) {
         .replace(/`([^`]+)`/g, '$1')               // `código` en línea
         .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')     // imágenes ![alt](url)
         .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')   // enlaces [texto](url) -> texto
+        .replace(/https?:\/\/[^\s]+/g, ' ')        // URLs http(s)://...
+        .replace(/www\.[^\s]+/g, ' ')              // enlaces www...
+        .replace(/[a-z0-9.\-]+\.(com|net|org|es|io|edu|gov)(\/[^\s]*)?/gi, ' ') // dominios sueltos
         .replace(/(\*\*\*|\*\*|\*|___|__|_|~~)/g, '') // *, **, ***, _, __, ___, ~~
         .replace(/^\s{0,3}#{1,6}\s*/gm, '')        // encabezados ### al inicio de línea
         .replace(/^\s*>+\s?/gm, '')                // citas >
@@ -1784,8 +1915,13 @@ function renderFileList() {
 
 // ============ VISTAS ============
 function switchView(view) {
-    $('view-editor').style.display = 'block';
-    $('ribbonInicio')?.classList.toggle('active', true);
+    const isAdmin = view === 'admin';
+    const layout = document.querySelector('.gh-layout');
+    if (layout) layout.style.display = isAdmin ? 'none' : '';
+    const adminView = $('view-admin');
+    if (adminView) adminView.style.display = isAdmin ? 'block' : 'none';
+    $('ribbonInicio')?.classList.toggle('active', !isAdmin);
+    window.scrollTo(0, 0);
 }
 
 // ============ UTILIDADES ============
