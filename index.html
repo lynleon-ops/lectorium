@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lectorium — Lector en español</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNiIgZmlsbD0iIzdjM2FlZCIvPjx0ZXh0IHg9IjE2IiB5PSIyMyIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsICdUaW1lcyBOZXcgUm9tYW4nLCBzZXJpZiIgZm9udC1zaXplPSIyMiIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TDwvdGV4dD48L3N2Zz4K">
     <style>
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap');
 
@@ -754,14 +755,7 @@
         <div id="view-editor">
             <div class="gh-editor">
                 <div class="gh-textarea-wrap">
-                    <textarea class="gh-textarea" id="editor" placeholder="Escribe o pega aquí el texto en español..." spellcheck="false">Hola, bienvenido a Lectorium.
-
-Este editor te permite:
-• Leer el texto con la voz de Google en español
-• Exportar el audio como archivo MP3
-• Ajustar velocidad, tono y volumen
-
-Prueba escribiendo algo y presiona el botón ▶ para escucharlo.</textarea>
+                    <textarea class="gh-textarea" id="editor" placeholder="Escribe o pega aquí el texto en español..." spellcheck="false"></textarea>
                     <div id="readOverlay" class="gh-read-overlay" aria-hidden="true"></div>
                 </div>
                 <div class="gh-statusbar">
@@ -1085,7 +1079,7 @@ async function init() {
 
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
-    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v5.8. Todos los derechos reservados.`;
+    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v5.9. Todos los derechos reservados.`;
 }
 
 // ============ ÁREA DE ADMINISTRACIÓN (email + contraseña portero) ============
