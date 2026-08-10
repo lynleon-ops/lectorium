@@ -416,7 +416,7 @@
             outline: none;
             font-family: var(--font-mono);
             font-size: 14px;
-            line-height: 1.7;
+            line-height: 1.2;
             color: var(--text);
             background: var(--bg);
             resize: vertical;
@@ -431,7 +431,7 @@
             padding: 20px;
             font-family: var(--font-mono);
             font-size: 14px;
-            line-height: 1.7;
+            line-height: 1.2;
             color: var(--text);
             background: var(--bg);
             overflow-y: auto;
@@ -739,6 +739,14 @@
     <button class="gh-ribbon-btn" onclick="speakSelection()" title="Leer solo el texto seleccionado">
         <span class="ic">🔊</span>
         <span class="rlabel">Leer selección</span>
+    </button>
+    <button class="gh-ribbon-btn" onclick="stripFormat()" title="Quitar etiquetas HTML y marcas Markdown (dejar texto plano)">
+        <span class="ic">&lt;/&gt;</span>
+        <span class="rlabel">Quitar formato</span>
+    </button>
+    <button class="gh-ribbon-btn" onclick="compactText()" title="Quitar líneas en blanco y espacios de más">
+        <span class="ic">↕</span>
+        <span class="rlabel">Compactar</span>
     </button>
     <button class="gh-ribbon-btn" onclick="clearText()" title="Limpiar el editor">
         <span class="ic">🧹</span>
@@ -1079,7 +1087,7 @@ async function init() {
 
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
-    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v5.9. Todos los derechos reservados.`;
+    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v6.3. Todos los derechos reservados.`;
 }
 
 // ============ ÁREA DE ADMINISTRACIÓN (email + contraseña portero) ============
@@ -2123,6 +2131,59 @@ function clearText() {
     updateTabName('sin_titulo.txt');
     updateCharCount();
     showToast('Editor limpiado', 'success');
+}
+
+// Quitar etiquetas HTML y marcas Markdown, dejando texto plano
+function stripFormat() {
+    const antes = editor.value;
+    if (!antes.trim()) { showToast('No hay texto', 'warning'); return; }
+    let t = antes.replace(/\r\n?/g, '\n');
+    // Bloques de código ``` ```
+    t = t.replace(/```[\s\S]*?```/g, m => m.replace(/```/g, ''));
+    // HTML: saltos y cierres de bloque -> nueva línea, luego quitar etiquetas
+    t = t.replace(/<br\s*\/?>/gi, '\n');
+    t = t.replace(/<\/(p|div|h[1-6]|li|tr|blockquote)>/gi, '\n');
+    t = t.replace(/<[^>]+>/g, '');
+    // Entidades HTML comunes
+    const ent = { '&nbsp;': ' ', '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&apos;': "'", '&hellip;': '…', '&mdash;': '—', '&ndash;': '–' };
+    t = t.replace(/&[a-z#0-9]+;/gi, m => ent[m.toLowerCase()] || m);
+    // Markdown: imágenes y enlaces -> texto
+    t = t.replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1');
+    t = t.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1');
+    // Encabezados, citas, viñetas, listas numeradas, reglas
+    t = t.replace(/^\s{0,3}#{1,6}\s*/gm, '');
+    t = t.replace(/^\s{0,3}>\s?/gm, '');
+    t = t.replace(/^\s{0,3}[-*+]\s+/gm, '');
+    t = t.replace(/^\s{0,3}\d+[.)]\s+/gm, '');
+    t = t.replace(/^\s{0,3}([-*_])\1{2,}\s*$/gm, '');
+    // Énfasis: negrita, cursiva, tachado, código en línea
+    t = t.replace(/(\*\*|__)(.*?)\1/g, '$2');
+    t = t.replace(/(\*|_)(.*?)\1/g, '$2');
+    t = t.replace(/~~(.*?)~~/g, '$1');
+    t = t.replace(/`([^`]+)`/g, '$1');
+    // Limpiar espacios sobrantes
+    t = t.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+    editor.value = t;
+    updateCharCount();
+    const quitados = antes.length - t.length;
+    showToast(quitados > 0 ? `Formato quitado (${quitados} caracteres)` : 'No había formato que quitar', 'success');
+}
+
+// Quitar líneas en blanco de más y espacios sobrantes (texto pegado de PDF/Word)
+function compactText() {
+    const antes = editor.value;
+    if (!antes.trim()) { showToast('No hay texto que compactar', 'warning'); return; }
+    const despues = antes
+        .replace(/\r\n?/g, '\n')        // normalizar saltos
+        .replace(/[ \t]+\n/g, '\n')     // quitar espacios al final de línea
+        .replace(/\n{2,}/g, '\n')       // líneas en blanco -> una sola
+        .replace(/[ \t]{2,}/g, ' ')     // espacios múltiples -> uno
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    editor.value = despues;
+    updateCharCount();
+    const quitados = antes.length - despues.length;
+    showToast(quitados > 0 ? `Compactado (${quitados} caracteres de más quitados)` : 'Ya estaba compacto', 'success');
 }
 
 // ============ MODALES ============
