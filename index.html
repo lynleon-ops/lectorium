@@ -721,57 +721,6 @@
 </head>
 <body>
 
-<!-- ===== PANTALLA DE PIN (portero privado) ===== -->
-<div id="pinLock" style="position:fixed;inset:0;z-index:9999;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center">
-    <div style="background:var(--bg);border:1px solid var(--border);border-top:3px solid var(--accent);padding:32px 28px;max-width:340px;width:90%;text-align:center">
-        <div style="font-family:'Cormorant Garamond',Georgia,serif;font-size:1.8rem;font-weight:500;letter-spacing:.28em;text-transform:uppercase;margin-bottom:6px">L<span style="color:var(--accent)">ector</span>ium</div>
-        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:20px">Sitio privado — introduce tu PIN</div>
-        <input type="password" id="pinInput" inputmode="numeric" maxlength="6" autocomplete="off"
-            placeholder="••••••"
-            style="width:100%;text-align:center;letter-spacing:.5em;font-size:22px;padding:12px;border:1px solid var(--border);border-radius:3px;font-family:var(--font-mono)">
-        <div id="pinError" style="font-size:12px;color:var(--danger);min-height:18px;margin-top:8px"></div>
-        <button onclick="checkPin()" style="width:100%;margin-top:8px;padding:11px;background:var(--accent);color:#fff;border:1px solid var(--accent);border-radius:3px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer">Entrar</button>
-    </div>
-</div>
-<script>
-    // PIN de portero: se compara por hash (el número no está escrito en el código)
-    const PIN_HASH = 'deb33bfe77470953f5e77daa7062ba8217525faa1494b3ff9911506ce1d03714';
-    const PIN_SALT = 'lectorium-salt-';
-
-    async function hashPin(pin) {
-        const data = new TextEncoder().encode(PIN_SALT + pin);
-        const buf = await crypto.subtle.digest('SHA-256', data);
-        return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-
-    async function checkPin() {
-        const val = document.getElementById('pinInput').value.trim();
-        if (!val) { document.getElementById('pinError').textContent = 'Escribe tu PIN'; return; }
-        const h = await hashPin(val);
-        if (h === PIN_HASH) {
-            sessionStorage.setItem('lectorium_unlocked', '1');
-            document.getElementById('pinLock').style.display = 'none';
-        } else {
-            document.getElementById('pinError').textContent = 'PIN incorrecto';
-            document.getElementById('pinInput').value = '';
-            document.getElementById('pinInput').focus();
-        }
-    }
-
-    // Si ya se desbloqueó en esta sesión, no volver a pedir
-    if (sessionStorage.getItem('lectorium_unlocked') === '1') {
-        document.getElementById('pinLock').style.display = 'none';
-    } else {
-        window.addEventListener('load', () => {
-            const inp = document.getElementById('pinInput');
-            if (inp) {
-                inp.focus();
-                inp.addEventListener('keydown', e => { if (e.key === 'Enter') checkPin(); });
-            }
-        });
-    }
-</script>
-
 <!-- ===== HEADER ===== -->
 <header class="gh-header">
     <div class="gh-header-left">
@@ -1136,7 +1085,7 @@ async function init() {
 
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
-    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v5.7. Todos los derechos reservados.`;
+    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v5.8. Todos los derechos reservados.`;
 }
 
 // ============ ÁREA DE ADMINISTRACIÓN (email + contraseña portero) ============
@@ -1381,6 +1330,46 @@ function getCloudVoice() {
 }
 
 // Llamar a la API y obtener el audio MP3 (como Blob)
+// Divide el texto en segmentos por debajo del límite de bytes de la API (5000)
+function splitByBytes(text, maxBytes = 4500) {
+    const enc = new TextEncoder();
+    const bytes = s => enc.encode(s).length;
+    // Cortar primero por oraciones/saltos de línea
+    const sentences = text.match(/[^.!?…\n]+[.!?…]*\s*|\n+/g) || [text];
+    const parts = [];
+    let cur = '';
+    for (const s of sentences) {
+        if (bytes(s) > maxBytes) {
+            // Oración muy larga: cortarla por palabras
+            if (cur) { parts.push(cur); cur = ''; }
+            let piece = '';
+            for (const word of s.split(/(\s+)/)) {
+                if (bytes(piece + word) > maxBytes) {
+                    if (piece) parts.push(piece);
+                    piece = word;
+                    // Palabra suelta enorme (raro): cortar por caracteres
+                    while (bytes(piece) > maxBytes) {
+                        let cut = piece;
+                        while (bytes(cut) > maxBytes) cut = cut.slice(0, -1);
+                        parts.push(cut);
+                        piece = piece.slice(cut.length);
+                    }
+                } else {
+                    piece += word;
+                }
+            }
+            if (piece) cur = piece;
+        } else if (bytes(cur + s) > maxBytes) {
+            if (cur) parts.push(cur);
+            cur = s;
+        } else {
+            cur += s;
+        }
+    }
+    if (cur.trim()) parts.push(cur);
+    return parts.filter(p => p.trim());
+}
+
 async function gcloudSynthesize(text) {
     const cv = getCloudVoice();
     if (!cv) throw new Error('No hay voz de Google Cloud seleccionada');
@@ -1394,33 +1383,38 @@ async function gcloudSynthesize(text) {
     const volume = parseFloat($('volume').value);
     const volumeGainDb = volume <= 0 ? -96 : (volume - 1) * 16;  // 0->-96dB, 1->0dB
 
-    const body = {
-        input: { text: cleanText },
-        voice: { languageCode: cv.languageCode, name: cv.name },
-        audioConfig: {
-            audioEncoding: 'MP3',
-            speakingRate: Math.min(4, Math.max(0.25, rate)),
-            pitch: Math.min(20, Math.max(-20, pitch)),
-            volumeGainDb: Math.min(16, Math.max(-96, volumeGainDb))
-        }
+    const voice = { languageCode: cv.languageCode, name: cv.name };
+    const audioConfig = {
+        audioEncoding: 'MP3',
+        speakingRate: Math.min(4, Math.max(0.25, rate)),
+        pitch: Math.min(20, Math.max(-20, pitch)),
+        volumeGainDb: Math.min(16, Math.max(-96, volumeGainDb))
     };
-
-    const resp = await fetch(`${GCLOUD_ENDPOINT}/text:synthesize?key=${encodeURIComponent(gcloudKey)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-    });
-    if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        throw new Error(err.error?.message || `Error ${resp.status}`);
-    }
-    const data = await resp.json();
-    // Contar los caracteres procesados (para el panel de admin)
     const tipo = /Neural2/i.test(cv.name) ? 'Neural2' : /Wavenet/i.test(cv.name) ? 'Wavenet' : 'Standard';
-    addUsage(cleanText.length, tipo);
-    // La API devuelve el MP3 en base64
-    const bytes = Uint8Array.from(atob(data.audioContent), c => c.charCodeAt(0));
-    return new Blob([bytes], { type: 'audio/mpeg' });
+
+    // La API limita cada petición a 5000 bytes: trocear y unir los MP3
+    const segments = splitByBytes(cleanText, 4500);
+    const blobs = [];
+    for (let i = 0; i < segments.length; i++) {
+        if (segments.length > 1) {
+            setStatus(`⏳ Generando audio... parte ${i + 1}/${segments.length}`, 'recording');
+        }
+        const resp = await fetch(`${GCLOUD_ENDPOINT}/text:synthesize?key=${encodeURIComponent(gcloudKey)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ input: { text: segments[i] }, voice, audioConfig })
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.error?.message || `Error ${resp.status}`);
+        }
+        const data = await resp.json();
+        addUsage(segments[i].length, tipo);   // contar caracteres procesados
+        const bytes = Uint8Array.from(atob(data.audioContent), c => c.charCodeAt(0));
+        blobs.push(new Blob([bytes], { type: 'audio/mpeg' }));
+    }
+    // Unir todas las partes en un solo MP3
+    return new Blob(blobs, { type: 'audio/mpeg' });
 }
 
 let cloudAudioEl = null;
