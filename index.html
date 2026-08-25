@@ -589,7 +589,15 @@
                 margin-left: 8px;
                 margin-right: 8px;
             }
-            .gh-header { margin-top: 8px; padding: 10px 12px; }
+            .gh-header {
+                justify-content: flex-start;
+                margin-top: 8px;
+                padding: 10px 12px;
+            }
+            .gh-header-menu {
+                order: -1;
+                flex-shrink: 0;
+            }
             .gh-title { font-size: 1.45rem; letter-spacing: .2em; }
             .gh-footer { justify-content: flex-start; text-align: left; }
             .gh-btn { padding: 7px 10px; font-size: 13px; min-height: 36px; }
@@ -995,7 +1003,7 @@ async function init() {
 
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
-    if (fc) fc.textContent = `© Copyright ${new Date().getFullYear()} Lectorium v24.5`;
+    if (fc) fc.textContent = `© Copyright ${new Date().getFullYear()} Lectorium v24.6`;
 }
 
 // Alterna el menú sándwich en móvil
