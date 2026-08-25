@@ -641,6 +641,7 @@
                 overflow: visible;
                 justify-content: flex-end;
             }
+            .gh-ribbon.collapsed { display: none; }
             .ribbon-hamburger { display: none; }
             .gh-ribbon-items {
                 display: flex;
@@ -974,7 +975,7 @@ async function init() {
 
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
-    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v23.9. Todos los derechos reservados.`;
+    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v24.0. Todos los derechos reservados.`;
 }
 
 // Alterna el menú sándwich en móvil
