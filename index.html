@@ -622,7 +622,18 @@
                 margin-top: 8px;
             }
             .gh-ribbon.open .gh-ribbon-items { display: flex; }
-            .gh-ribbon-items .gh-ribbon-btn { width: 100%; justify-content: flex-start; }
+            .gh-ribbon-items .gh-ribbon-btn {
+                width: 100%;
+                justify-content: flex-start;
+                padding: 11px 12px;
+                font-size: 16px;
+                font-weight: 700;
+            }
+            .gh-ribbon-items .gh-ribbon-btn .ic { display: none; }
+            .gh-ribbon-items .gh-ribbon-btn .rlabel {
+                font-size: 16px;
+                font-weight: 700;
+            }
             .gh-ribbon-items .gh-ribbon-sep { display: none; }
         }
     </style>
@@ -639,7 +650,7 @@
 <!-- ===== RIBBON ===== -->
 <div class="gh-ribbon" id="ribbon">
     <button type="button" class="gh-ribbon-btn ribbon-hamburger" id="ribbonToggle" onclick="toggleRibbonMenu()" title="Menú" aria-label="Menú" aria-controls="ribbonItems" aria-expanded="false">
-        <span class="ic">☰</span>
+        <span class="rlabel">Menú</span>
     </button>
     <div class="gh-ribbon-items" id="ribbonItems">
         <button class="gh-ribbon-btn" id="ribbonInicio" onclick="switchView('editor')" title="Ir al editor">
