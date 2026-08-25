@@ -975,7 +975,7 @@ async function init() {
 
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
-    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v24.0. Todos los derechos reservados.`;
+    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v24.1. Todos los derechos reservados.`;
 }
 
 // Alterna el menú sándwich en móvil
@@ -1350,8 +1350,11 @@ let cloudPlaying = false;      // ¿reproduciendo audio de Google Cloud?
 let cloudChunks = [];          // fragmentos para el cursor en modo nube
 let cloudCum = [];             // longitudes acumuladas de caracteres
 let cloudTotalChars = 1;
+let cloudHighlightFrame = null;
+const HIGHLIGHT_WORD_COUNT = 3;
 
 function cleanupCloudAudio() {
+    stopCloudHighlightLoop();
     if (cloudAudioEl) {
         cloudAudioEl.pause();
         cloudAudioEl.removeAttribute('src');
@@ -1407,11 +1410,6 @@ async function speakCloud(text) {
         if (btnPause) btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
         updatePlaybackControls();
 
-        cloudAudioEl.ontimeupdate = () => {
-            if (!cloudAudioEl.duration) return;
-            const pos = (cloudAudioEl.currentTime / cloudAudioEl.duration) * cloudTotalChars;
-            highlightWordGlobal(pos);
-        };
         cloudAudioEl.onended = () => {
             cloudPlaying = false;
             hideReadOverlay();
@@ -1430,6 +1428,7 @@ async function speakCloud(text) {
         };
         setStatus('🔊 Leyendo (Google Cloud)...', 'speaking');
         await cloudAudioEl.play();
+        startCloudHighlightLoop();
     } catch (e) {
         console.error(e);
         cloudPlaying = false;
@@ -1752,13 +1751,46 @@ function clearChunkHl() {
     if (ov) ov.querySelectorAll('.rc.hl').forEach(el => el.classList.remove('hl'));
 }
 
-// Resaltar una palabra concreta (elemento) y centrarla
+function stopCloudHighlightLoop() {
+    if (cloudHighlightFrame) {
+        cancelAnimationFrame(cloudHighlightFrame);
+        cloudHighlightFrame = null;
+    }
+}
+
+function startCloudHighlightLoop() {
+    stopCloudHighlightLoop();
+    const tick = () => {
+        if (!cloudPlaying || !cloudAudioEl) return;
+        if (cloudAudioEl.duration) {
+            const pos = (cloudAudioEl.currentTime / cloudAudioEl.duration) * cloudTotalChars;
+            highlightWordGlobal(pos);
+        }
+        cloudHighlightFrame = requestAnimationFrame(tick);
+    };
+    cloudHighlightFrame = requestAnimationFrame(tick);
+}
+
+// Resaltar un grupo corto de palabras y centrarlo
 function highlightWordEl(el) {
     const ov = $('readOverlay');
     if (!ov || !el) return;
+    const anchor = el;
     ov.querySelectorAll('.w.hl').forEach(e => e.classList.remove('hl'));
-    el.classList.add('hl');
-    const top = el.offsetTop - ov.clientHeight / 2;
+    let current = el;
+    let selected = 0;
+    while (current && selected < HIGHLIGHT_WORD_COUNT) {
+        if (current.classList?.contains('w')) {
+            current.classList.add('hl');
+            selected++;
+        }
+        current = current.nextElementSibling;
+        while (!current && el.parentElement?.nextElementSibling) {
+            el = el.parentElement.nextElementSibling.querySelector('.w');
+            current = el;
+        }
+    }
+    const top = anchor.offsetTop - ov.clientHeight / 2;
     ov.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
 }
 
