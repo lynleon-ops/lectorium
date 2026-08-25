@@ -68,6 +68,14 @@
             gap: 12px;
             min-width: 0;
         }
+        .gh-title-wrap {
+            border: none;
+            background: none;
+            padding: 0;
+            font: inherit;
+            color: inherit;
+            cursor: pointer;
+        }
         .gh-logo {
             width: 32px; height: 32px;
             background: var(--text);
@@ -198,7 +206,7 @@
         .gh-ribbon-btn:active { background: var(--bg-tertiary); }
         .gh-ribbon-btn.active { background: var(--accent-light); color: var(--accent); border-color: var(--accent-light); }
         .gh-ribbon-btn.active .rlabel { color: var(--accent); }
-        .gh-ribbon-btn .ic { font-size: 16px; line-height: 1; }
+        .gh-ribbon-btn .ic { display: none; }
         .gh-ribbon-btn .rlabel { font-size: 13px; }
         /* Carpeta elegida = verde */
         .gh-ribbon-btn.folder.connected .rlabel { color: var(--success); }
@@ -621,6 +629,7 @@
                 gap: 4px;
             }
             .gh-ribbon.open .gh-ribbon-items { display: flex; }
+            .gh-ribbon.collapsed .gh-ribbon-items { display: none; }
             .gh-ribbon-items .gh-ribbon-btn {
                 width: 100%;
                 justify-content: flex-start;
@@ -642,7 +651,9 @@
 <!-- ===== HEADER ===== -->
 <header class="gh-header">
     <div class="gh-header-left">
-        <div class="gh-title">L<span>ector</span>ium</div>
+        <button type="button" class="gh-title-wrap" onclick="toggleMobileRibbon()" aria-label="Mostrar u ocultar menú móvil">
+            <span class="gh-title">L<span>ector</span>ium</span>
+        </button>
     </div>
 </header>
 
@@ -695,7 +706,7 @@
 
                 <!-- PLAYER: controles de lectura, estilo GitHub Light -->
                 <div class="gh-player">
-                    <button type="button" class="gh-player-btn main" id="btnSpeak" onclick="speak()" title="Leer">
+                    <button type="button" class="gh-player-btn main" id="btnSpeak" onclick="toggleSpeakStop()" title="Leer o detener">
                         <span class="pic">▶</span> Leer
                     </button>
                     <button type="button" class="gh-player-btn" id="btnPause" onclick="togglePause()" title="Pausar o reanudar" disabled>
@@ -707,12 +718,9 @@
                     <button type="button" class="gh-player-btn" id="btnForward" onclick="skipForward()" title="Avanzar" disabled>
                         <span class="pic">⏩</span> Avanzar
                     </button>
-                    <button type="button" class="gh-player-btn" id="btnStop" onclick="stop()" title="Detener" disabled>
-                        <span class="pic">⏹</span> Detener
-                    </button>
                     <div class="gh-player-spacer"></div>
-                    <button type="button" class="gh-player-btn generate" id="btnGenerate" onclick="generateMp3()" title="Generar y descargar MP3 con Google Cloud" style="display:none">
-                        <span class="pic">⬇</span> Generar MP3
+                    <button type="button" class="gh-player-btn generate" id="btnGenerate" onclick="generateMp3()" title="Grabar y descargar MP3 con Google Cloud">
+                        <span class="pic">⬇</span> Grabar MP3
                     </button>
                 </div>
             </div>
@@ -905,7 +913,6 @@ const btnSpeak = $('btnSpeak');
 const btnPause = $('btnPause');
 const btnBack = $('btnBack');
 const btnForward = $('btnForward');
-const btnStop = $('btnStop');
 
 // ============ INIT ============
 function updateAppHeight() {
@@ -952,13 +959,19 @@ async function init() {
 
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
-    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v23.7. Todos los derechos reservados.`;
+    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v23.8. Todos los derechos reservados.`;
 }
 
 // Alterna el menú sándwich en móvil
 function toggleRibbonMenu() {
     const open = $('ribbon').classList.toggle('open');
     $('ribbonToggle')?.setAttribute('aria-expanded', String(open));
+}
+
+function toggleMobileRibbon() {
+    if (!window.matchMedia('(max-width: 600px)').matches) return;
+    const collapsed = $('ribbon').classList.toggle('collapsed');
+    $('ribbonToggle')?.setAttribute('aria-expanded', String(!collapsed));
 }
 
 // ============ MANTENER LA PANTALLA ACTIVA AL LEER (Wake Lock) ============
@@ -1172,7 +1185,6 @@ function clearGcloudKey() {
     storageRemove('gcloud_tts_key');
     gcloudVoices = [];
     $('gcloudKey').value = '';
-    $('btnGenerate').style.display = 'none';
     $('gcloudStatus').textContent = 'Sin conectar. Pega tu clave para activar voces de alta calidad y descarga MP3.';
     $('gcloudStatus').style.color = 'var(--text-secondary)';
     populateVoices();
@@ -1209,13 +1221,11 @@ async function verifyGcloud() {
         const nStd = gcloudVoices.filter(v => /Standard/i.test(v.name)).length;
         $('gcloudStatus').innerHTML = `✅ <b>Conectado.</b><br>${nWave} WaveNet · ${nNeural} Neural2 · ${nStd} Standard`;
         $('gcloudStatus').style.color = 'var(--success)';
-        $('btnGenerate').style.display = 'inline-flex';
         populateVoices();   // añade las voces cloud al menú
         showToast('Google Cloud conectado', 'success');
     } catch (e) {
         console.error(e);
         gcloudVoices = [];
-        $('btnGenerate').style.display = 'none';
         $('gcloudStatus').textContent = '⚠️ No se pudo conectar: ' + (e.message || e);
         $('gcloudStatus').style.color = 'var(--danger)';
         populateVoices();
@@ -1377,6 +1387,7 @@ async function speakCloud(text) {
         showReadOverlay(chunks);
         cloudPlaying = true;
         requestWakeLock();
+        btnSpeak.innerHTML = '<span class="pic">⏹</span> Detener';
         btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
         updatePlaybackControls();
 
@@ -1628,10 +1639,17 @@ function updatePlaybackControls() {
     btnPause.disabled = !active;
     btnBack.disabled = !active;
     btnForward.disabled = !active;
-    btnStop.disabled = !active;
 }
 
 // ============ LECTURA ============
+function toggleSpeakStop() {
+    if (isSpeaking || cloudPlaying) {
+        stop();
+        return;
+    }
+    speak();
+}
+
 function speak() {
     const text = editor.value.trim();
     if (!text) { showToast('Escribe algo primero', 'warning'); return; }
@@ -1792,7 +1810,7 @@ function startSpeech(text) {
     isSpeaking = true;
     isPaused = false;
     requestWakeLock();
-    btnSpeak.innerHTML = '<span class="pic">🔁</span> Repetir';
+    btnSpeak.innerHTML = '<span class="pic">⏹</span> Detener';
     btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
     updatePlaybackControls();
     showReadOverlay(speechQueue);
