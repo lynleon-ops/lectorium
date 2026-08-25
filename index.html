@@ -68,6 +68,22 @@
             gap: 12px;
             min-width: 0;
         }
+        .gh-header-menu {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            height: 42px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--bg);
+            color: var(--text);
+            font-size: 22px;
+            font-weight: 700;
+            line-height: 1;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
         .gh-title-wrap {
             border: none;
             background: none;
@@ -233,7 +249,7 @@
             align-items: center;
             justify-content: center;
             gap: 6px;
-            padding: 8px 14px;
+            padding: 11px 18px;
             border: 1px solid var(--border);
             background: var(--bg);
             border-radius: var(--radius);
@@ -244,7 +260,7 @@
             color: var(--text);
             transition: all 0.1s;
             box-shadow: 0 1px 0 rgba(31,35,40,0.04);
-            min-height: 38px;
+            min-height: 46px;
             touch-action: manipulation;
         }
         .gh-player-btn:hover { background: var(--bg-secondary); border-color: var(--border-strong); }
@@ -592,18 +608,18 @@
             }
             .gh-player {
                 display: grid;
-                grid-template-columns: repeat(3, minmax(0, 1fr));
+                grid-template-columns: repeat(2, minmax(0, 1fr));
                 gap: 6px;
                 padding: 10px;
             }
             .gh-player-btn {
                 width: 100%;
                 min-width: 0;
-                padding: 9px 6px;
-                font-size: 12px;
+                padding: 12px 8px;
+                font-size: 13px;
             }
             .gh-player-spacer { display: none; }
-            .gh-player-btn.generate { grid-column: 1 / -1; }
+            .gh-player-btn.generate { grid-column: auto; }
             .gh-panel { margin-bottom: 10px; }
             .gh-panel-body { padding: 12px; }
             .gh-control select,
@@ -619,20 +635,27 @@
                 justify-content: flex-start;
             }
             /* Ribbon móvil */
-            .gh-ribbon { flex-wrap: wrap; overflow: visible; }
+            .gh-header-menu { display: inline-flex; }
+            .gh-ribbon {
+                flex-wrap: wrap;
+                overflow: visible;
+                justify-content: flex-end;
+            }
             .ribbon-hamburger { display: none; }
             .gh-ribbon-items {
                 display: flex;
                 flex-direction: column;
-                align-items: stretch;
-                width: 100%;
+                align-items: flex-end;
+                width: min(100%, 260px);
                 gap: 4px;
+                margin-left: auto;
             }
             .gh-ribbon.open .gh-ribbon-items { display: flex; }
             .gh-ribbon.collapsed .gh-ribbon-items { display: none; }
             .gh-ribbon-items .gh-ribbon-btn {
                 width: 100%;
-                justify-content: flex-start;
+                justify-content: flex-end;
+                text-align: right;
                 padding: 11px 12px;
                 font-size: 16px;
                 font-weight: 700;
@@ -655,13 +678,13 @@
             <span class="gh-title">L<span>ector</span>ium</span>
         </button>
     </div>
+    <button type="button" class="gh-header-menu" id="ribbonToggle" onclick="toggleRibbonMenu()" title="Menú" aria-label="Menú" aria-controls="ribbonItems" aria-expanded="false">
+        ☰
+    </button>
 </header>
 
 <!-- ===== RIBBON ===== -->
-<div class="gh-ribbon" id="ribbon">
-    <button type="button" class="gh-ribbon-btn ribbon-hamburger" id="ribbonToggle" onclick="toggleRibbonMenu()" title="Menú" aria-label="Menú" aria-controls="ribbonItems" aria-expanded="false">
-        <span class="rlabel">Menú</span>
-    </button>
+<div class="gh-ribbon collapsed" id="ribbon">
     <div class="gh-ribbon-items" id="ribbonItems">
         <button class="gh-ribbon-btn" id="ribbonInicio" onclick="switchView('editor')" title="Ir al editor">
             <span class="ic">🏠</span>
@@ -709,16 +732,6 @@
                     <button type="button" class="gh-player-btn main" id="btnSpeak" onclick="toggleSpeakStop()" title="Leer o detener">
                         <span class="pic">▶</span> Leer
                     </button>
-                    <button type="button" class="gh-player-btn" id="btnPause" onclick="togglePause()" title="Pausar o reanudar" disabled>
-                        <span class="pic">⏸</span> Pausa
-                    </button>
-                    <button type="button" class="gh-player-btn" id="btnBack" onclick="skipBack()" title="Retroceder" disabled>
-                        <span class="pic">⏪</span> Atrás
-                    </button>
-                    <button type="button" class="gh-player-btn" id="btnForward" onclick="skipForward()" title="Avanzar" disabled>
-                        <span class="pic">⏩</span> Avanzar
-                    </button>
-                    <div class="gh-player-spacer"></div>
                     <button type="button" class="gh-player-btn generate" id="btnGenerate" onclick="generateMp3()" title="Grabar y descargar MP3 con Google Cloud">
                         <span class="pic">⬇</span> Grabar MP3
                     </button>
@@ -943,8 +956,10 @@ async function init() {
     const items = $('ribbonItems');
     if (items) items.addEventListener('click', (e) => {
         if (e.target.closest('.gh-ribbon-btn')) {
-            $('ribbon').classList.remove('open');
-            $('ribbonToggle')?.setAttribute('aria-expanded', 'false');
+            if (window.matchMedia('(max-width: 600px)').matches) {
+                $('ribbon').classList.add('collapsed');
+                $('ribbonToggle')?.setAttribute('aria-expanded', 'false');
+            }
         }
     });
 
@@ -959,13 +974,13 @@ async function init() {
 
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
-    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v23.8. Todos los derechos reservados.`;
+    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v23.9. Todos los derechos reservados.`;
 }
 
 // Alterna el menú sándwich en móvil
 function toggleRibbonMenu() {
-    const open = $('ribbon').classList.toggle('open');
-    $('ribbonToggle')?.setAttribute('aria-expanded', String(open));
+    const collapsed = $('ribbon').classList.toggle('collapsed');
+    $('ribbonToggle')?.setAttribute('aria-expanded', String(!collapsed));
 }
 
 function toggleMobileRibbon() {
@@ -1360,7 +1375,7 @@ function stopActivePlayback() {
     hideReadOverlay();
     releaseWakeLock();
     btnSpeak.innerHTML = '<span class="pic">▶</span> Leer';
-    btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
+    if (btnPause) btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
     updatePlaybackControls();
 }
 
@@ -1388,7 +1403,7 @@ async function speakCloud(text) {
         cloudPlaying = true;
         requestWakeLock();
         btnSpeak.innerHTML = '<span class="pic">⏹</span> Detener';
-        btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
+        if (btnPause) btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
         updatePlaybackControls();
 
         cloudAudioEl.ontimeupdate = () => {
@@ -1636,9 +1651,9 @@ function setStatus(msg, type) {
 
 function updatePlaybackControls() {
     const active = isSpeaking || cloudPlaying;
-    btnPause.disabled = !active;
-    btnBack.disabled = !active;
-    btnForward.disabled = !active;
+    if (btnPause) btnPause.disabled = !active;
+    if (btnBack) btnBack.disabled = !active;
+    if (btnForward) btnForward.disabled = !active;
 }
 
 // ============ LECTURA ============
@@ -1811,7 +1826,7 @@ function startSpeech(text) {
     isPaused = false;
     requestWakeLock();
     btnSpeak.innerHTML = '<span class="pic">⏹</span> Detener';
-    btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
+    if (btnPause) btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
     updatePlaybackControls();
     showReadOverlay(speechQueue);
     startKeepAlive();
@@ -1912,7 +1927,7 @@ function finishSpeechState() {
     hideReadOverlay();
     releaseWakeLock();
     btnSpeak.innerHTML = '<span class="pic">▶</span> Leer';
-    btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
+    if (btnPause) btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
     updatePlaybackControls();
 }
 
@@ -1921,11 +1936,11 @@ function togglePause() {
     if (cloudPlaying && cloudAudioEl) {
         if (cloudAudioEl.paused) {
             cloudAudioEl.play();
-            btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
+            if (btnPause) btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
             setStatus('🔊 Leyendo (Google Cloud)...', 'speaking');
         } else {
             cloudAudioEl.pause();
-            btnPause.innerHTML = '<span class="pic">▶</span> Reanudar';
+            if (btnPause) btnPause.innerHTML = '<span class="pic">▶</span> Reanudar';
             setStatus('⏸️ Pausado', 'paused');
         }
         return;
@@ -1934,12 +1949,12 @@ function togglePause() {
     if (isPaused) {
         isPaused = false;
         if (hasSpeechSynthesis) speechSynthesis.resume();
-        btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
+        if (btnPause) btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
         setStatus('🔊 Leyendo...', 'speaking');
     } else {
         isPaused = true;
         if (hasSpeechSynthesis) speechSynthesis.pause();
-        btnPause.innerHTML = '<span class="pic">▶</span> Reanudar';
+        if (btnPause) btnPause.innerHTML = '<span class="pic">▶</span> Reanudar';
         setStatus('⏸️ Pausado', 'paused');
     }
 }
@@ -2066,7 +2081,7 @@ document.addEventListener('keydown', (e) => {
         return;
     }
     if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
-    if (e.code === 'Space') { e.preventDefault(); isSpeaking ? togglePause() : speak(); }
+    if (e.code === 'Space') { e.preventDefault(); toggleSpeakStop(); }
 });
 
 // ============ INICIO ============
