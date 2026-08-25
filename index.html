@@ -186,6 +186,12 @@
             padding: 2px 10px;
             border-radius: 100px;
         }
+        .gh-footer-folder {
+            color: var(--success);
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
 
         /* ===== RIBBON (menú entre header y editor) ===== */
         .gh-ribbon {
@@ -193,7 +199,7 @@
             margin: 8px auto 0;
             background: var(--bg);
             border: 1px solid var(--border);
-            padding: 8px 16px;
+            padding: 10px 16px;
             display: flex;
             align-items: center;
             gap: 6px;
@@ -204,23 +210,23 @@
             display: inline-flex;
             flex-direction: row;
             align-items: center;
-            gap: 7px;
-            padding: 7px 14px;
-            border: 1px solid transparent;
-            background: transparent;
+            gap: 0;
+            padding: 9px 16px;
+            border: 1px solid var(--border-light);
+            background: var(--bg-secondary);
             border-radius: var(--radius);
             cursor: pointer;
-            color: var(--text-secondary);
+            color: var(--text);
             font-size: 13px;
-            font-weight: 500;
+            font-weight: 700;
             font-family: inherit;
             line-height: 1;
             white-space: nowrap;
             transition: all 0.12s;
         }
-        .gh-ribbon-btn:hover { background: var(--bg-secondary); color: var(--text); border-color: var(--border); }
+        .gh-ribbon-btn:hover { background: var(--bg); color: var(--accent); border-color: var(--accent); }
         .gh-ribbon-btn:active { background: var(--bg-tertiary); }
-        .gh-ribbon-btn.active { background: var(--accent-light); color: var(--accent); border-color: var(--accent-light); }
+        .gh-ribbon-btn.active { background: var(--accent-light); color: var(--accent); border-color: #b6e3ff; }
         .gh-ribbon-btn.active .rlabel { color: var(--accent); }
         .gh-ribbon-btn .ic { display: none; }
         .gh-ribbon-btn .rlabel { font-size: 13px; }
@@ -230,7 +236,7 @@
         .gh-ribbon-sep { width: 1px; align-self: stretch; background: var(--border); margin: 2px 6px; flex-shrink: 0; }
         /* Menú sándwich: oculto en escritorio, visible en móvil */
         .ribbon-hamburger { display: none; }
-        .gh-ribbon-items { display: flex; align-items: center; gap: 6px; flex: 1; }
+        .gh-ribbon-items { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex: 1; }
 
         /* ===== PLAYER (controles bajo el área de texto) ===== */
         .gh-player {
@@ -276,6 +282,7 @@
             background: var(--accent);
             border-color: var(--accent);
             color: #fff;
+            min-width: 118px;
         }
         .gh-player-btn.main:hover { background: #0860ca; border-color: #0860ca; }
         .gh-player-btn.main:active {
@@ -288,6 +295,7 @@
             background: var(--success);
             border-color: var(--success);
             color: #fff;
+            min-width: 142px;
         }
         .gh-player-btn.generate:hover { background: #147a2e; border-color: #147a2e; }
         .gh-player-btn.generate:active {
@@ -640,6 +648,8 @@
                 flex-wrap: wrap;
                 overflow: visible;
                 justify-content: flex-end;
+                padding: 8px;
+                background: var(--bg-secondary);
             }
             .gh-ribbon.collapsed { display: none; }
             .ribbon-hamburger { display: none; }
@@ -647,8 +657,8 @@
                 display: flex;
                 flex-direction: column;
                 align-items: flex-end;
-                width: min(100%, 260px);
-                gap: 4px;
+                width: min(100%, 250px);
+                gap: 6px;
                 margin-left: auto;
             }
             .gh-ribbon.open .gh-ribbon-items { display: flex; }
@@ -657,9 +667,15 @@
                 width: 100%;
                 justify-content: flex-end;
                 text-align: right;
-                padding: 11px 12px;
+                padding: 12px 14px;
+                border-color: var(--border);
+                background: var(--bg);
                 font-size: 16px;
                 font-weight: 700;
+            }
+            .gh-ribbon-items .gh-ribbon-btn.active {
+                background: var(--accent-light);
+                border-color: #b6e3ff;
             }
             .gh-ribbon-items .gh-ribbon-btn .ic { display: none; }
             .gh-ribbon-items .gh-ribbon-btn .rlabel {
@@ -730,7 +746,7 @@
 
                 <!-- PLAYER: controles de lectura, estilo GitHub Light -->
                 <div class="gh-player">
-                    <button type="button" class="gh-player-btn main" id="btnSpeak" onclick="toggleSpeakStop()" title="Leer o detener">
+                    <button type="button" class="gh-player-btn main" id="btnSpeak" onclick="toggleSpeakStop()" title="Leer o Stop">
                         <span class="pic">▶</span> Leer
                     </button>
                     <button type="button" class="gh-player-btn generate" id="btnGenerate" onclick="generateMp3()" title="Grabar y descargar MP3 con Google Cloud">
@@ -831,6 +847,7 @@
 <!-- ===== FOOTER ===== -->
 <footer class="gh-footer">
     <span id="footerCopyright"></span>
+    <span id="footerFolderStatus" class="gh-footer-folder"></span>
     <span style="flex:1"></span>
     <a href="#" onclick="openAdmin(); return false;" style="font-size:12px;color:var(--text-muted);text-decoration:none">🔒 Administración</a>
 </footer>
@@ -975,7 +992,7 @@ async function init() {
 
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
-    if (fc) fc.textContent = `© Copyright ${new Date().getFullYear()} Lectorium v24.3`;
+    if (fc) fc.textContent = `© Copyright ${new Date().getFullYear()} Lectorium v24.4`;
 }
 
 // Alterna el menú sándwich en móvil
@@ -1156,8 +1173,9 @@ async function clearMp3Folder() {
 
 function refreshFolderStatus() {
     const el = $('folderStatus');
-    if (!el) return;
     const name = storageGet('mp3dir_name', '');
+    updateFooterFolderStatus(name || 'Lectorium');
+    if (!el) return;
     if (name) {
         el.innerHTML = `📂 Carpeta actual: <b>${escapeHtml(name)}</b>. Los MP3 se guardarán ahí.`;
         el.style.color = 'var(--success)';
@@ -1165,6 +1183,12 @@ function refreshFolderStatus() {
         el.textContent = 'Opcional. Sin carpeta, los MP3 se descargan directo a tu carpeta de Descargas.';
         el.style.color = 'var(--text-secondary)';
     }
+}
+
+function updateFooterFolderStatus(name) {
+    const el = $('footerFolderStatus');
+    if (!el) return;
+    el.textContent = `Folder: ${name} ✓`;
 }
 
 // Recuperar el handle de la carpeta guardada y comprobar permiso
@@ -1406,7 +1430,7 @@ async function speakCloud(text) {
         showReadOverlay(chunks);
         cloudPlaying = true;
         requestWakeLock();
-        btnSpeak.innerHTML = '<span class="pic">⏹</span> Detener';
+        btnSpeak.innerHTML = '<span class="pic">⏹</span> Stop';
         if (btnPause) btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
         updatePlaybackControls();
 
@@ -1858,7 +1882,7 @@ function startSpeech(text) {
     isSpeaking = true;
     isPaused = false;
     requestWakeLock();
-    btnSpeak.innerHTML = '<span class="pic">⏹</span> Detener';
+    btnSpeak.innerHTML = '<span class="pic">⏹</span> Stop';
     if (btnPause) btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
     updatePlaybackControls();
     showReadOverlay(speechQueue);
