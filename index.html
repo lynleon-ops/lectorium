@@ -38,6 +38,7 @@
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
+        html, body { overflow-x: hidden; max-width: 100%; }
         body {
             background: var(--bg-secondary);
             color: var(--text);
@@ -750,7 +751,6 @@
 <div class="gh-ribbon" id="ribbon">
     <button class="gh-ribbon-btn ribbon-hamburger" id="ribbonToggle" onclick="toggleRibbonMenu()" title="Menú" aria-label="Menú">
         <span class="ic">☰</span>
-        <span class="rlabel">Menú</span>
     </button>
     <div class="gh-ribbon-items" id="ribbonItems">
         <button class="gh-ribbon-btn" id="ribbonInicio" onclick="switchView('editor')" title="Ir al editor">
@@ -758,10 +758,6 @@
             <span class="rlabel">Inicio</span>
         </button>
         <div class="gh-ribbon-sep"></div>
-        <button class="gh-ribbon-btn" onclick="speakSelection()" title="Leer solo el texto seleccionado">
-            <span class="ic">🔊</span>
-            <span class="rlabel">Leer selección</span>
-        </button>
         <button class="gh-ribbon-btn" onclick="stripFormat()" title="Quitar etiquetas HTML y marcas Markdown (dejar texto plano)">
             <span class="ic">&lt;/&gt;</span>
             <span class="rlabel">Quitar formato</span>
@@ -803,17 +799,8 @@
                     <button class="gh-player-btn main" id="btnSpeak" onclick="speak()" title="Leer">
                         <span class="pic">▶</span> Leer
                     </button>
-                    <button class="gh-player-btn" id="btnRewind" onclick="skipBack()" title="Retroceder">
-                        <span class="pic">⏪</span> Atrás
-                    </button>
-                    <button class="gh-player-btn" id="btnPause" onclick="togglePause()" title="Pausar">
-                        <span class="pic">⏸</span> Pausa
-                    </button>
                     <button class="gh-player-btn" id="btnStop" onclick="stop()" title="Detener">
                         <span class="pic">⏹</span> Detener
-                    </button>
-                    <button class="gh-player-btn" id="btnForward" onclick="skipForward()" title="Avanzar">
-                        <span class="pic">⏩</span> Avanza
                     </button>
                     <div class="gh-player-spacer"></div>
                     <button class="gh-player-btn generate" id="btnGenerate" onclick="generateMp3()" title="Generar y descargar MP3 con Google Cloud" style="display:none">
@@ -1088,7 +1075,7 @@ const statusMsg = $('statusMsg');
 const charInfo = $('charInfo');
 const visualizer = $('visualizer');
 const btnSpeak = $('btnSpeak');
-const btnPause = $('btnPause');
+const btnPause = $('btnPause') || {};   // el botón de pausa se quitó del player; stub seguro
 const audioPlayer = $('audioPlayer');
 
 // ============ INIT ============
@@ -1124,7 +1111,7 @@ async function init() {
 
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
-    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v6.4. Todos los derechos reservados.`;
+    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v6.5. Todos los derechos reservados.`;
 }
 
 // Alterna el menú sándwich en móvil
