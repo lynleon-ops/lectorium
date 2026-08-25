@@ -198,6 +198,9 @@
         .gh-ribbon-btn.folder.connected .rlabel { color: var(--success); }
         .gh-ribbon-btn.folder.connected .ic { filter: none; }
         .gh-ribbon-sep { width: 1px; align-self: stretch; background: var(--border); margin: 2px 6px; flex-shrink: 0; }
+        /* Menú sándwich: oculto en escritorio, visible en móvil */
+        .ribbon-hamburger { display: none; }
+        .gh-ribbon-items { display: flex; align-items: center; gap: 6px; flex: 1; }
 
         /* ===== PLAYER (controles bajo el área de texto) ===== */
         .gh-player {
@@ -717,6 +720,20 @@
             .gh-footer { justify-content: flex-start; text-align: left; }
             .gh-btn { padding: 5px 10px; font-size: 12px; }
             .gh-htab { padding: 5px 10px; font-size: 12px; }
+            /* Ribbon como menú sándwich */
+            .gh-ribbon { flex-wrap: wrap; overflow: visible; }
+            .ribbon-hamburger { display: inline-flex; }
+            .gh-ribbon-items {
+                display: none;
+                flex-direction: column;
+                align-items: stretch;
+                width: 100%;
+                gap: 4px;
+                margin-top: 8px;
+            }
+            .gh-ribbon.open .gh-ribbon-items { display: flex; }
+            .gh-ribbon-items .gh-ribbon-btn { width: 100%; justify-content: flex-start; }
+            .gh-ribbon-items .gh-ribbon-sep { display: none; }
         }
     </style>
 </head>
@@ -731,27 +748,33 @@
 
 <!-- ===== RIBBON ===== -->
 <div class="gh-ribbon" id="ribbon">
-    <button class="gh-ribbon-btn" id="ribbonInicio" onclick="switchView('editor')" title="Ir al editor">
-        <span class="ic">🏠</span>
-        <span class="rlabel">Inicio</span>
+    <button class="gh-ribbon-btn ribbon-hamburger" id="ribbonToggle" onclick="toggleRibbonMenu()" title="Menú" aria-label="Menú">
+        <span class="ic">☰</span>
+        <span class="rlabel">Menú</span>
     </button>
-    <div class="gh-ribbon-sep"></div>
-    <button class="gh-ribbon-btn" onclick="speakSelection()" title="Leer solo el texto seleccionado">
-        <span class="ic">🔊</span>
-        <span class="rlabel">Leer selección</span>
-    </button>
-    <button class="gh-ribbon-btn" onclick="stripFormat()" title="Quitar etiquetas HTML y marcas Markdown (dejar texto plano)">
-        <span class="ic">&lt;/&gt;</span>
-        <span class="rlabel">Quitar formato</span>
-    </button>
-    <button class="gh-ribbon-btn" onclick="compactText()" title="Quitar líneas en blanco y espacios de más">
-        <span class="ic">↕</span>
-        <span class="rlabel">Compactar</span>
-    </button>
-    <button class="gh-ribbon-btn" onclick="clearText()" title="Limpiar el editor">
-        <span class="ic">🧹</span>
-        <span class="rlabel">Limpiar</span>
-    </button>
+    <div class="gh-ribbon-items" id="ribbonItems">
+        <button class="gh-ribbon-btn" id="ribbonInicio" onclick="switchView('editor')" title="Ir al editor">
+            <span class="ic">🏠</span>
+            <span class="rlabel">Inicio</span>
+        </button>
+        <div class="gh-ribbon-sep"></div>
+        <button class="gh-ribbon-btn" onclick="speakSelection()" title="Leer solo el texto seleccionado">
+            <span class="ic">🔊</span>
+            <span class="rlabel">Leer selección</span>
+        </button>
+        <button class="gh-ribbon-btn" onclick="stripFormat()" title="Quitar etiquetas HTML y marcas Markdown (dejar texto plano)">
+            <span class="ic">&lt;/&gt;</span>
+            <span class="rlabel">Quitar formato</span>
+        </button>
+        <button class="gh-ribbon-btn" onclick="compactText()" title="Quitar líneas en blanco y espacios de más">
+            <span class="ic">↕</span>
+            <span class="rlabel">Compactar</span>
+        </button>
+        <button class="gh-ribbon-btn" onclick="clearText()" title="Limpiar el editor">
+            <span class="ic">🧹</span>
+            <span class="rlabel">Limpiar</span>
+        </button>
+    </div>
 </div>
 
 <!-- ===== LAYOUT ===== -->
@@ -1085,9 +1108,47 @@ async function init() {
     updateUsageMini();
     refreshFolderStatus();
 
+    // Menú sándwich (móvil): cerrar al pulsar una opción
+    const items = $('ribbonItems');
+    if (items) items.addEventListener('click', (e) => {
+        if (e.target.closest('.gh-ribbon-btn')) $('ribbon').classList.remove('open');
+    });
+
+    // Si la pantalla se apagó/volvió: re-adquirir wake lock y reanudar si seguía leyendo
+    document.addEventListener('visibilitychange', async () => {
+        if (document.visibilityState === 'visible') {
+            if (isSpeaking || cloudPlaying) await requestWakeLock();
+            if (isSpeaking && !isPaused) { try { speechSynthesis.resume(); } catch (e) {} }
+        }
+    });
+
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
-    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v6.3. Todos los derechos reservados.`;
+    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v6.4. Todos los derechos reservados.`;
+}
+
+// Alterna el menú sándwich en móvil
+function toggleRibbonMenu() {
+    $('ribbon').classList.toggle('open');
+}
+
+// ============ MANTENER LA PANTALLA ACTIVA AL LEER (Wake Lock) ============
+let wakeLock = null;
+
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator && !wakeLock) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            wakeLock.addEventListener('release', () => { wakeLock = null; });
+        }
+    } catch (e) {
+        // Algunos navegadores no lo permiten; la lectura sigue igualmente
+        console.warn('Wake Lock no disponible:', e.message || e);
+    }
+}
+
+async function releaseWakeLock() {
+    try { if (wakeLock) { await wakeLock.release(); wakeLock = null; } } catch (e) {}
 }
 
 // ============ ÁREA DE ADMINISTRACIÓN (email + contraseña portero) ============
@@ -1445,6 +1506,7 @@ async function speakCloud(text) {
         cloudTotalChars = acc || 1;
         showReadOverlay(chunks);
         cloudPlaying = true;
+        requestWakeLock();
         btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
 
         cloudAudioEl.ontimeupdate = () => {
@@ -1455,12 +1517,14 @@ async function speakCloud(text) {
         cloudAudioEl.onended = () => {
             cloudPlaying = false;
             hideReadOverlay();
+            releaseWakeLock();
             setStatus('✅ Finalizado');
             URL.revokeObjectURL(url);
         };
         cloudAudioEl.onerror = () => {
             cloudPlaying = false;
             hideReadOverlay();
+            releaseWakeLock();
             setStatus('⚠️ Error al reproducir');
         };
         setStatus('🔊 Leyendo (Google Cloud)...', 'speaking');
@@ -1826,6 +1890,7 @@ function startSpeech(text) {
     queueIndex = 0;
     isSpeaking = true;
     isPaused = false;
+    requestWakeLock();
     btnSpeak.innerHTML = '<span class="pic">🔁</span> Repetir';
     btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
     showReadOverlay(speechQueue);
@@ -1925,6 +1990,7 @@ function finishSpeechState() {
     queueIndex = 0;
     stopKeepAlive();
     hideReadOverlay();
+    releaseWakeLock();
     btnSpeak.innerHTML = '<span class="pic">▶</span> Leer';
     btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
 }
@@ -1963,6 +2029,7 @@ function stop() {
     if (cloudAudioEl) { cloudAudioEl.pause(); cloudAudioEl.currentTime = 0; }
     cloudPlaying = false;
     hideReadOverlay();
+    releaseWakeLock();
     setStatus('⏹️ Detenido');
 }
 
