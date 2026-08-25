@@ -236,7 +236,7 @@
         .gh-ribbon-sep { width: 1px; align-self: stretch; background: var(--border); margin: 2px 6px; flex-shrink: 0; }
         /* Menú sándwich: oculto en escritorio, visible en móvil */
         .ribbon-hamburger { display: none; }
-        .gh-ribbon-items { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex: 1; }
+        .gh-ribbon-items { display: flex; align-items: center; justify-content: flex-start; gap: 8px; flex: 1; }
 
         /* ===== PLAYER (controles bajo el área de texto) ===== */
         .gh-player {
@@ -647,31 +647,34 @@
             .gh-ribbon {
                 flex-wrap: wrap;
                 overflow: visible;
-                justify-content: flex-end;
-                padding: 8px;
-                background: var(--bg-secondary);
+                justify-content: flex-start;
+                padding: 10px;
+                background: var(--bg);
+                border-color: var(--border);
+                box-shadow: 0 8px 18px rgba(31,35,40,0.08);
             }
             .gh-ribbon.collapsed { display: none; }
             .ribbon-hamburger { display: none; }
             .gh-ribbon-items {
                 display: flex;
                 flex-direction: column;
-                align-items: flex-end;
-                width: min(100%, 250px);
+                align-items: stretch;
+                width: 100%;
                 gap: 6px;
-                margin-left: auto;
+                margin-left: 0;
             }
             .gh-ribbon.open .gh-ribbon-items { display: flex; }
             .gh-ribbon.collapsed .gh-ribbon-items { display: none; }
             .gh-ribbon-items .gh-ribbon-btn {
                 width: 100%;
-                justify-content: flex-end;
-                text-align: right;
-                padding: 12px 14px;
+                justify-content: flex-start;
+                text-align: left;
+                padding: 13px 14px;
                 border-color: var(--border);
                 background: var(--bg);
                 font-size: 16px;
                 font-weight: 700;
+                box-shadow: 0 1px 0 rgba(31,35,40,0.04);
             }
             .gh-ribbon-items .gh-ribbon-btn.active {
                 background: var(--accent-light);
@@ -992,7 +995,7 @@ async function init() {
 
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
-    if (fc) fc.textContent = `© Copyright ${new Date().getFullYear()} Lectorium v24.4`;
+    if (fc) fc.textContent = `© Copyright ${new Date().getFullYear()} Lectorium v24.5`;
 }
 
 // Alterna el menú sándwich en móvil
