@@ -713,7 +713,8 @@
         }
         @media (max-width: 860px) {
             .gh-layout { grid-template-columns: 1fr; }
-            .gh-side { position: static; }
+            .gh-main { min-width: 0; }
+            .gh-side { position: static; top: auto; width: 100%; }
             .gh-header { flex-wrap: wrap; gap: 10px; }
         }
         @media (max-width: 600px) {
@@ -721,6 +722,9 @@
             .gh-footer { justify-content: flex-start; text-align: left; }
             .gh-btn { padding: 5px 10px; font-size: 12px; }
             .gh-htab { padding: 5px 10px; font-size: 12px; }
+            .gh-main, .gh-side, .gh-panel, .gh-editor { min-width: 0; max-width: 100%; }
+            #voiceSelect { width: 100%; max-width: 100%; }
+            .gh-player { flex-wrap: wrap; }
             /* Ribbon como menú sándwich */
             .gh-ribbon { flex-wrap: wrap; overflow: visible; }
             .ribbon-hamburger { display: inline-flex; }
@@ -813,47 +817,16 @@
 
     <!-- RIGHT SIDEBAR -->
     <aside class="gh-side">
-        <!-- Voice Settings -->
+        <!-- Voz -->
         <div class="gh-panel">
-            <div class="gh-panel-header">
-                🎛️ Voz y ajustes
-                <button class="gh-btn" style="padding:2px 8px;font-size:12px" onclick="resetVoiceSettings()" title="Volver a la configuración inicial">↺ Restablecer</button>
-            </div>
+            <div class="gh-panel-header">🎛️ Voz</div>
             <div class="gh-panel-body">
                 <div class="gh-control">
-                    <label>Voz (Google español)</label>
+                    <label>Voz (español)</label>
                     <select id="voiceSelect"></select>
                     <div id="voiceHint" style="font-size:11px;color:var(--text-muted);margin-top:4px"></div>
+                    <div id="gcloudMini" style="font-size:11px;color:var(--text-muted);margin-top:6px"></div>
                 </div>
-                <div class="gh-control">
-                    <label>Velocidad</label>
-                    <div class="gh-range-wrap">
-                        <input type="range" id="rate" min="0.3" max="2" step="0.1" value="1">
-                        <span class="gh-range-val" id="rateVal">1.0x</span>
-                    </div>
-                </div>
-                <div class="gh-control">
-                    <label>Tono</label>
-                    <div class="gh-range-wrap">
-                        <input type="range" id="pitch" min="0.5" max="2" step="0.1" value="1">
-                        <span class="gh-range-val" id="pitchVal">1.0</span>
-                    </div>
-                </div>
-                <div class="gh-control">
-                    <label>Volumen</label>
-                    <div class="gh-range-wrap">
-                        <input type="range" id="volume" min="0" max="1" step="0.05" value="1">
-                        <span class="gh-range-val" id="volVal">100%</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Botón discreto al área de administración -->
-        <div class="gh-panel">
-            <div class="gh-panel-body" style="text-align:center">
-                <button class="gh-btn" style="width:100%;font-size:12px" onclick="openAdmin()">🔒 Área de administración</button>
-                <div id="gcloudMini" style="font-size:11px;color:var(--text-muted);margin-top:6px"></div>
             </div>
         </div>
     </aside>
@@ -932,6 +905,8 @@
 <!-- ===== FOOTER ===== -->
 <footer class="gh-footer">
     <span id="footerCopyright"></span>
+    <span style="flex:1"></span>
+    <a href="#" onclick="openAdmin(); return false;" style="font-size:12px;color:var(--text-muted);text-decoration:none">🔒 Administración</a>
 </footer>
 
 <!-- ===== SAVE TEXT MODAL ===== -->
@@ -1064,12 +1039,6 @@ async function dbGetHandle(key) {
 const $ = id => document.getElementById(id);
 const editor = $('editor');
 const voiceSelect = $('voiceSelect');
-const rate = $('rate');
-const pitch = $('pitch');
-const volume = $('volume');
-const rateVal = $('rateVal');
-const pitchVal = $('pitchVal');
-const volVal = $('volVal');
 const statusDot = $('statusDot');
 const statusMsg = $('statusMsg');
 const charInfo = $('charInfo');
@@ -1111,7 +1080,7 @@ async function init() {
 
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
-    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v6.5. Todos los derechos reservados.`;
+    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v6.6. Todos los derechos reservados.`;
 }
 
 // Alterna el menú sándwich en móvil
@@ -1426,19 +1395,12 @@ async function gcloudSynthesize(text) {
 
     const cleanText = cleanForSpeech(text);
 
-    const rate = parseFloat($('rate').value) || 1;
-    const pitchRange = (parseFloat($('pitch').value) || 1);
-    // La API usa pitch en semitonos (-20 a 20); mapeo el slider (0.5-2) a un rango suave
-    const pitch = Math.round((pitchRange - 1) * 10);
-    const volume = parseFloat($('volume').value);
-    const volumeGainDb = volume <= 0 ? -96 : (volume - 1) * 16;  // 0->-96dB, 1->0dB
-
     const voice = { languageCode: cv.languageCode, name: cv.name };
     const audioConfig = {
         audioEncoding: 'MP3',
-        speakingRate: Math.min(4, Math.max(0.25, rate)),
-        pitch: Math.min(20, Math.max(-20, pitch)),
-        volumeGainDb: Math.min(16, Math.max(-96, volumeGainDb))
+        speakingRate: 1,
+        pitch: 0,
+        volumeGainDb: 0
     };
     const tipo = /Neural2/i.test(cv.name) ? 'Neural2' : /Wavenet/i.test(cv.name) ? 'Wavenet' : 'Standard';
 
@@ -1680,24 +1642,6 @@ function getSelectedVoice() {
     return (!isNaN(idx) && voices[idx]) ? voices[idx] : null;
 }
 
-// ============ RESTABLECER VOZ ============
-function resetVoiceSettings() {
-    rate.value = DEFAULTS.rate;
-    pitch.value = DEFAULTS.pitch;
-    volume.value = DEFAULTS.volume;
-    rateVal.textContent = DEFAULTS.rate.toFixed(1) + 'x';
-    pitchVal.textContent = DEFAULTS.pitch.toFixed(1);
-    volVal.textContent = Math.round(DEFAULTS.volume * 100) + '%';
-    // Volver a la primera voz de la lista (la Google predeterminada)
-    if (voiceSelect.options.length > 0) voiceSelect.selectedIndex = 0;
-    showToast('Configuración de voz restablecida', 'success');
-}
-
-// ============ SLIDERS ============
-rate.addEventListener('input', () => rateVal.textContent = parseFloat(rate.value).toFixed(1) + 'x');
-pitch.addEventListener('input', () => pitchVal.textContent = parseFloat(pitch.value).toFixed(1));
-volume.addEventListener('input', () => volVal.textContent = Math.round(volume.value * 100) + '%');
-
 // ============ CONTADOR ============
 editor.addEventListener('input', updateCharCount);
 function updateCharCount() {
@@ -1918,9 +1862,9 @@ function makeUtterance(text) {
     } else {
         u.lang = 'es-ES';
     }
-    u.rate = parseFloat(rate.value);
-    u.pitch = parseFloat(pitch.value);
-    u.volume = parseFloat(volume.value);
+    u.rate = 1;
+    u.pitch = 1;
+    u.volume = 1;
     return u;
 }
 
