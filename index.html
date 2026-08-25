@@ -2,12 +2,10 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Lectorium — Lector en español</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNiIgZmlsbD0iIzdjM2FlZCIvPjx0ZXh0IHg9IjE2IiB5PSIyMyIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsICdUaW1lcyBOZXcgUm9tYW4nLCBzZXJpZiIgZm9udC1zaXplPSIyMiIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+TDwvdGV4dD48L3N2Zz4K">
     <style>
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap');
-
         /* ===== GITHUB LIGHT THEME ===== */
         :root {
             --bg: #ffffff;
@@ -39,6 +37,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         html, body { overflow-x: hidden; max-width: 100%; }
+        html { min-height: 100%; }
         body {
             background: var(--bg-secondary);
             color: var(--text);
@@ -46,6 +45,9 @@
             font-size: 14px;
             line-height: 1.5;
             min-height: 100vh;
+            min-height: 100dvh;
+            -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
         }
 
         /* ===== HEADER ===== */
@@ -64,6 +66,7 @@
             display: flex;
             align-items: center;
             gap: 12px;
+            min-width: 0;
         }
         .gh-logo {
             width: 32px; height: 32px;
@@ -83,6 +86,7 @@
             text-transform: uppercase;
             color: var(--text);
             line-height: 1;
+            overflow-wrap: anywhere;
         }
         .gh-title span { color: var(--accent); font-weight: 500; }
         .gh-badge {
@@ -170,6 +174,7 @@
             align-items: center;
             gap: 6px;
             overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
         .gh-ribbon-btn {
             display: inline-flex;
@@ -231,6 +236,8 @@
             color: var(--text);
             transition: all 0.1s;
             box-shadow: 0 1px 0 rgba(31,35,40,0.04);
+            min-height: 38px;
+            touch-action: manipulation;
         }
         .gh-player-btn:hover { background: var(--bg-secondary); border-color: var(--border-strong); }
         /* Efecto de hundido al pulsar */
@@ -266,64 +273,12 @@
         }
         .gh-player-spacer { flex: 1; min-width: 12px; }
         .gh-player-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-        .gh-htabs {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 100px;
-            padding: 4px;
-        }
-        .gh-htab {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 14px;
-            border: none;
-            background: none;
-            border-radius: 100px;
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--text-secondary);
-            cursor: pointer;
-            font-family: inherit;
-            transition: all 0.15s;
-            white-space: nowrap;
-        }
-        .gh-htab:hover { color: var(--text); }
-        .gh-htab.active {
-            background: var(--bg);
-            color: var(--accent);
-            box-shadow: var(--shadow-sm);
-            border: 1px solid var(--border);
-            font-weight: 600;
-        }
-        .gh-htab .count {
-            background: var(--bg-tertiary);
-            color: var(--text-secondary);
-            font-size: 11px;
-            padding: 1px 6px;
-            border-radius: 100px;
-            font-weight: 600;
-        }
-        .gh-htab.active .count { background: var(--accent-light); color: var(--accent); }
-
         /* ===== CENTER PANEL ===== */
         .gh-main {
             background: var(--bg);
             border: 1px solid var(--border);
             border-radius: var(--radius-lg);
             overflow: hidden;
-        }
-        .gh-toolbar {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border-light);
-            background: var(--bg-secondary);
-            flex-wrap: wrap;
         }
         .gh-btn {
             display: inline-flex;
@@ -366,49 +321,10 @@
             cursor: not-allowed;
         }
 
-        .gh-divider {
-            width: 1px;
-            height: 24px;
-            background: var(--border);
-            margin: 0 4px;
-        }
-
         /* Editor */
         .gh-editor {
             padding: 0;
         }
-        .gh-tabs {
-            display: flex;
-            border-bottom: 1px solid var(--border-light);
-            background: var(--bg-secondary);
-        }
-        .gh-tab {
-            padding: 10px 18px;
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--text-secondary);
-            cursor: pointer;
-            border: none;
-            background: none;
-            border-bottom: 2px solid transparent;
-            transition: all 0.15s;
-            font-family: inherit;
-        }
-        .gh-tab:hover { color: var(--text); }
-        .gh-tab.active {
-            color: var(--text);
-            border-bottom-color: var(--accent);
-            background: var(--bg);
-        }
-        .gh-tab .close {
-            margin-left: 8px;
-            opacity: 0;
-            font-size: 14px;
-            cursor: pointer;
-        }
-        .gh-tab:hover .close, .gh-tab.active .close { opacity: 0.6; }
-        .gh-tab .close:hover { opacity: 1; color: var(--danger); }
-
         .gh-textarea-wrap {
             position: relative;
         }
@@ -424,6 +340,7 @@
             color: var(--text);
             background: var(--bg);
             resize: vertical;
+            display: block;
         }
         .gh-textarea::placeholder { color: var(--text-muted); }
 
@@ -443,6 +360,7 @@
             word-wrap: break-word;
             overflow-wrap: break-word;
             cursor: default;
+            -webkit-overflow-scrolling: touch;
         }
         .gh-read-overlay.active { display: block; }
         .gh-read-overlay .rc, .gh-read-overlay .w { transition: background 0.1s; border-radius: 3px; }
@@ -467,6 +385,7 @@
             background: var(--bg-secondary);
             font-size: 12px;
             color: var(--text-muted);
+            gap: 8px;
         }
         .gh-statusbar .dot {
             width: 8px; height: 8px;
@@ -564,44 +483,6 @@
             font-family: var(--font-mono);
         }
 
-        /* File list */
-        .gh-file-list {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        .gh-file-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 12px;
-            border-radius: var(--radius);
-            cursor: pointer;
-            transition: background 0.15s;
-            font-size: 13px;
-        }
-        .gh-file-item:hover { background: var(--bg-secondary); }
-        .gh-file-item.active { background: var(--accent-light); }
-        .gh-file-item .f-icon { font-size: 16px; }
-        .gh-file-item .f-name { flex: 1; color: var(--text); font-weight: 500; }
-        .gh-file-item .f-date { color: var(--text-muted); font-size: 11px; }
-        .gh-file-item .f-del {
-            opacity: 0;
-            color: var(--danger);
-            font-size: 14px;
-            cursor: pointer;
-            padding: 2px 4px;
-        }
-        .gh-file-item:hover .f-del { opacity: 1; }
-        .gh-file-item .f-del:hover { background: var(--danger-bg); border-radius: 4px; }
-
-        .gh-empty {
-            text-align: center;
-            padding: 30px 20px;
-            color: var(--text-muted);
-            font-size: 13px;
-        }
-        .gh-empty .icon { font-size: 32px; margin-bottom: 8px; display: block; }
-
         /* Toast */
         .gh-toast {
             position: fixed;
@@ -655,58 +536,6 @@
         .gh-vbar:nth-child(9){height:20%;animation-delay:0s}
         @keyframes vbar-anim { 0%,100%{transform:scaleY(.3)} 50%{transform:scaleY(1)} }
 
-        /* Modal */
-        .gh-modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s;
-        }
-        .gh-modal-overlay.show { opacity: 1; pointer-events: all; }
-        .gh-modal {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow);
-            width: 90%;
-            max-width: 420px;
-            overflow: hidden;
-            transform: scale(0.95);
-            transition: transform 0.2s;
-        }
-        .gh-modal-overlay.show .gh-modal { transform: scale(1); }
-        .gh-modal-header {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border-light);
-            font-size: 16px;
-            font-weight: 600;
-        }
-        .gh-modal-body { padding: 20px; }
-        .gh-modal-body input {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            font-size: 14px;
-            font-family: inherit;
-            color: var(--text);
-        }
-        .gh-modal-body input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
-        .gh-modal-footer {
-            padding: 12px 20px;
-            border-top: 1px solid var(--border-light);
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            background: var(--bg-secondary);
-        }
-
         /* Responsive */
         @media (max-width: 1000px) {
             .gh-layout { grid-template-columns: minmax(0, 1fr) 260px; }
@@ -718,13 +547,69 @@
             .gh-header { flex-wrap: wrap; gap: 10px; }
         }
         @media (max-width: 600px) {
-            .gh-header, .gh-footer, .gh-ribbon, .gh-layout { margin-left: 8px; margin-right: 8px; }
+            body {
+                background: var(--bg);
+                min-height: var(--app-height, 100dvh);
+                padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+            }
+            .gh-header, .gh-footer, .gh-ribbon, .gh-layout {
+                width: auto;
+                margin-left: 8px;
+                margin-right: 8px;
+            }
+            .gh-header { margin-top: 8px; padding: 10px 12px; }
+            .gh-title { font-size: 1.45rem; letter-spacing: .2em; }
             .gh-footer { justify-content: flex-start; text-align: left; }
-            .gh-btn { padding: 5px 10px; font-size: 12px; }
-            .gh-htab { padding: 5px 10px; font-size: 12px; }
+            .gh-btn { padding: 7px 10px; font-size: 13px; min-height: 36px; }
             .gh-main, .gh-side, .gh-panel, .gh-editor { min-width: 0; max-width: 100%; }
+            .gh-layout { gap: 10px; }
             #voiceSelect { width: 100%; max-width: 100%; }
-            .gh-player { flex-wrap: wrap; }
+            .gh-textarea {
+                min-height: min(52vh, 430px);
+                min-height: min(52dvh, 430px);
+                padding: 14px;
+                font-size: 16px;
+                line-height: 1.35;
+                resize: none;
+            }
+            .gh-read-overlay {
+                padding: 14px;
+                font-size: 16px;
+                line-height: 1.35;
+            }
+            .gh-statusbar {
+                align-items: flex-start;
+                flex-direction: column;
+                padding: 8px 12px;
+            }
+            .gh-player {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 6px;
+                padding: 10px;
+            }
+            .gh-player-btn {
+                width: 100%;
+                min-width: 0;
+                padding: 9px 6px;
+                font-size: 12px;
+            }
+            .gh-player-spacer { display: none; }
+            .gh-player-btn.generate { grid-column: 1 / -1; }
+            .gh-panel { margin-bottom: 10px; }
+            .gh-panel-body { padding: 12px; }
+            .gh-control select,
+            .gh-admin-page input {
+                font-size: 16px;
+            }
+            .gh-toast {
+                left: 8px;
+                right: 8px;
+                bottom: calc(8px + env(safe-area-inset-bottom));
+                width: auto;
+                max-width: none;
+                justify-content: flex-start;
+            }
             /* Ribbon como menú sándwich */
             .gh-ribbon { flex-wrap: wrap; overflow: visible; }
             .ribbon-hamburger { display: inline-flex; }
@@ -753,7 +638,7 @@
 
 <!-- ===== RIBBON ===== -->
 <div class="gh-ribbon" id="ribbon">
-    <button class="gh-ribbon-btn ribbon-hamburger" id="ribbonToggle" onclick="toggleRibbonMenu()" title="Menú" aria-label="Menú">
+    <button type="button" class="gh-ribbon-btn ribbon-hamburger" id="ribbonToggle" onclick="toggleRibbonMenu()" title="Menú" aria-label="Menú" aria-controls="ribbonItems" aria-expanded="false">
         <span class="ic">☰</span>
     </button>
     <div class="gh-ribbon-items" id="ribbonItems">
@@ -790,7 +675,7 @@
                     <div id="readOverlay" class="gh-read-overlay" aria-hidden="true"></div>
                 </div>
                 <div class="gh-statusbar">
-                    <span><span class="dot" id="statusDot"></span><span id="statusMsg">Listo</span><span class="gh-visualizer" id="visualizer">
+                    <span><span class="dot" id="statusDot"></span><span id="statusMsg" aria-live="polite">Listo</span><span class="gh-visualizer" id="visualizer">
                         <span class="gh-vbar"></span><span class="gh-vbar"></span><span class="gh-vbar"></span>
                         <span class="gh-vbar"></span><span class="gh-vbar"></span><span class="gh-vbar"></span>
                         <span class="gh-vbar"></span><span class="gh-vbar"></span><span class="gh-vbar"></span>
@@ -800,14 +685,23 @@
 
                 <!-- PLAYER: controles de lectura, estilo GitHub Light -->
                 <div class="gh-player">
-                    <button class="gh-player-btn main" id="btnSpeak" onclick="speak()" title="Leer">
+                    <button type="button" class="gh-player-btn main" id="btnSpeak" onclick="speak()" title="Leer">
                         <span class="pic">▶</span> Leer
                     </button>
-                    <button class="gh-player-btn" id="btnStop" onclick="stop()" title="Detener">
+                    <button type="button" class="gh-player-btn" id="btnPause" onclick="togglePause()" title="Pausar o reanudar" disabled>
+                        <span class="pic">⏸</span> Pausa
+                    </button>
+                    <button type="button" class="gh-player-btn" id="btnBack" onclick="skipBack()" title="Retroceder" disabled>
+                        <span class="pic">⏪</span> Atrás
+                    </button>
+                    <button type="button" class="gh-player-btn" id="btnForward" onclick="skipForward()" title="Avanzar" disabled>
+                        <span class="pic">⏩</span> Avanzar
+                    </button>
+                    <button type="button" class="gh-player-btn" id="btnStop" onclick="stop()" title="Detener" disabled>
                         <span class="pic">⏹</span> Detener
                     </button>
                     <div class="gh-player-spacer"></div>
-                    <button class="gh-player-btn generate" id="btnGenerate" onclick="generateMp3()" title="Generar y descargar MP3 con Google Cloud" style="display:none">
+                    <button type="button" class="gh-player-btn generate" id="btnGenerate" onclick="generateMp3()" title="Generar y descargar MP3 con Google Cloud" style="display:none">
                         <span class="pic">⬇</span> Generar MP3
                     </button>
                 </div>
@@ -909,110 +803,64 @@
     <a href="#" onclick="openAdmin(); return false;" style="font-size:12px;color:var(--text-muted);text-decoration:none">🔒 Administración</a>
 </footer>
 
-<!-- ===== SAVE TEXT MODAL ===== -->
-<div class="gh-modal-overlay" id="saveModal">
-    <div class="gh-modal">
-        <div class="gh-modal-header">💾 Guardar Texto</div>
-        <div class="gh-modal-body">
-            <label style="display:block;font-size:12px;color:var(--text-secondary);margin-bottom:6px">Nombre del archivo</label>
-            <input type="text" id="saveFilename" placeholder="mi_texto.txt" value="">
-        </div>
-        <div class="gh-modal-footer">
-            <button class="gh-btn" onclick="closeModal('saveModal')">Cancelar</button>
-            <button class="gh-btn gh-btn-primary" onclick="confirmSaveText()">Guardar</button>
-        </div>
-    </div>
-</div>
-
 <!-- ===== TOAST ===== -->
-<div class="gh-toast" id="toast"></div>
+<div class="gh-toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 // ============ ESTADO ============
 let voices = [];
-let googleVoices = [];          // solo voces Google es-ES / es-US
 let isSpeaking = false;
 let isPaused = false;
 let currentFilename = 'sin_titulo.txt';
-let savedTexts = loadJSON('tts_texts');
-let savedAudios = [];
 let speechQueue = [];
 let queueIndex = 0;
 let keepAliveTimer = null;
-let currentAudioUrl = null;
 
-// Valores iniciales de la configuración de voz (para el botón Restablecer)
-const DEFAULTS = { rate: 1, pitch: 1, volume: 1 };
+const hasSpeechSynthesis = typeof window.speechSynthesis !== 'undefined'
+    && typeof window.SpeechSynthesisUtterance !== 'undefined';
 
-function loadJSON(key) {
-    try { return JSON.parse(localStorage.getItem(key) || '[]'); }
-    catch { return []; }
+function storageGet(key, fallback = '') {
+    try { return localStorage.getItem(key) ?? fallback; }
+    catch { return fallback; }
+}
+
+function storageSet(key, value) {
+    try { localStorage.setItem(key, value); return true; }
+    catch { return false; }
+}
+
+function storageRemove(key) {
+    try { localStorage.removeItem(key); } catch {}
+}
+
+function sessionGet(key, fallback = '') {
+    try { return sessionStorage.getItem(key) ?? fallback; }
+    catch { return fallback; }
+}
+
+function sessionSet(key, value) {
+    try { sessionStorage.setItem(key, value); return true; }
+    catch { return false; }
 }
 
 // ============ INDEXEDDB ============
-// Guarda blobs de audio y los handles de carpeta (que sí se pueden serializar en IDB).
+// Guarda handles de carpeta, que sí se pueden serializar en IndexedDB.
 const DB_NAME = 'tts_reader';
-const DB_STORE = 'audios';
 const DB_HANDLES = 'handles';
 
 function openDB() {
     return new Promise((resolve, reject) => {
+        if (!('indexedDB' in window)) {
+            reject(new Error('IndexedDB no disponible'));
+            return;
+        }
         const req = indexedDB.open(DB_NAME, 2);
         req.onupgradeneeded = (e) => {
             const db = req.result;
-            if (!db.objectStoreNames.contains(DB_STORE)) db.createObjectStore(DB_STORE, { keyPath: 'id' });
             if (!db.objectStoreNames.contains(DB_HANDLES)) db.createObjectStore(DB_HANDLES);
         };
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => reject(req.error);
-    });
-}
-
-async function dbPutAudio(item) {
-    const db = await openDB();
-    return new Promise((resolve, reject) => {
-        const tx = db.transaction(DB_STORE, 'readwrite');
-        tx.objectStore(DB_STORE).put(item);
-        tx.oncomplete = resolve;
-        tx.onerror = () => reject(tx.error);
-    });
-}
-
-async function dbGetAllAudios() {
-    const db = await openDB();
-    return new Promise((resolve, reject) => {
-        const req = db.transaction(DB_STORE, 'readonly').objectStore(DB_STORE).getAll();
-        req.onsuccess = () => resolve(req.result || []);
-        req.onerror = () => reject(req.error);
-    });
-}
-
-async function dbGetAudio(id) {
-    const db = await openDB();
-    return new Promise((resolve, reject) => {
-        const req = db.transaction(DB_STORE, 'readonly').objectStore(DB_STORE).get(id);
-        req.onsuccess = () => resolve(req.result || null);
-        req.onerror = () => reject(req.error);
-    });
-}
-
-async function dbDeleteAudio(id) {
-    const db = await openDB();
-    return new Promise((resolve, reject) => {
-        const tx = db.transaction(DB_STORE, 'readwrite');
-        tx.objectStore(DB_STORE).delete(id);
-        tx.oncomplete = resolve;
-        tx.onerror = () => reject(tx.error);
-    });
-}
-
-async function dbClearAudios() {
-    const db = await openDB();
-    return new Promise((resolve, reject) => {
-        const tx = db.transaction(DB_STORE, 'readwrite');
-        tx.objectStore(DB_STORE).clear();
-        tx.oncomplete = resolve;
-        tx.onerror = () => reject(tx.error);
     });
 }
 
@@ -1044,13 +892,22 @@ const statusMsg = $('statusMsg');
 const charInfo = $('charInfo');
 const visualizer = $('visualizer');
 const btnSpeak = $('btnSpeak');
-const btnPause = $('btnPause') || {};   // el botón de pausa se quitó del player; stub seguro
-const audioPlayer = $('audioPlayer');
+const btnPause = $('btnPause');
+const btnBack = $('btnBack');
+const btnForward = $('btnForward');
+const btnStop = $('btnStop');
 
 // ============ INIT ============
+function updateAppHeight() {
+    document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+}
+
 async function init() {
+    updateAppHeight();
+    window.addEventListener('resize', updateAppHeight, { passive: true });
+    window.addEventListener('orientationchange', () => setTimeout(updateAppHeight, 250));
     populateVoices();
-    if ('onvoiceschanged' in speechSynthesis) {
+    if (hasSpeechSynthesis && 'onvoiceschanged' in speechSynthesis) {
         speechSynthesis.onvoiceschanged = populateVoices;
     }
     updateCharCount();
@@ -1063,29 +920,35 @@ async function init() {
     }
     updateUsageMini();
     refreshFolderStatus();
+    updatePlaybackControls();
 
     // Menú sándwich (móvil): cerrar al pulsar una opción
     const items = $('ribbonItems');
     if (items) items.addEventListener('click', (e) => {
-        if (e.target.closest('.gh-ribbon-btn')) $('ribbon').classList.remove('open');
+        if (e.target.closest('.gh-ribbon-btn')) {
+            $('ribbon').classList.remove('open');
+            $('ribbonToggle')?.setAttribute('aria-expanded', 'false');
+        }
     });
 
     // Si la pantalla se apagó/volvió: re-adquirir wake lock y reanudar si seguía leyendo
     document.addEventListener('visibilitychange', async () => {
         if (document.visibilityState === 'visible') {
             if (isSpeaking || cloudPlaying) await requestWakeLock();
-            if (isSpeaking && !isPaused) { try { speechSynthesis.resume(); } catch (e) {} }
+            if (hasSpeechSynthesis && isSpeaking && !isPaused) { try { speechSynthesis.resume(); } catch (e) {} }
         }
     });
+    window.addEventListener('pagehide', stopActivePlayback);
 
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
-    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v6.6. Todos los derechos reservados.`;
+    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v23.5. Todos los derechos reservados.`;
 }
 
 // Alterna el menú sándwich en móvil
 function toggleRibbonMenu() {
-    $('ribbon').classList.toggle('open');
+    const open = $('ribbon').classList.toggle('open');
+    $('ribbonToggle')?.setAttribute('aria-expanded', String(open));
 }
 
 // ============ MANTENER LA PANTALLA ACTIVA AL LEER (Wake Lock) ============
@@ -1113,14 +976,17 @@ const ADMIN_PASS_HASH  = 'aadbb2c7f1dea31c7c758d0c63c28729f52c9fd778422384452933
 const ADMIN_SALT = 'lectorium-admin-';
 
 async function sha256(text) {
+    if (!globalThis.crypto?.subtle || !globalThis.TextEncoder) {
+        throw new Error('Criptografía no disponible en este navegador');
+    }
     const data = new TextEncoder().encode(text);
-    const buf = await crypto.subtle.digest('SHA-256', data);
+    const buf = await globalThis.crypto.subtle.digest('SHA-256', data);
     return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 function openAdmin() {
     // Si ya inició sesión en esta sesión, mostrar directo el contenido
-    if (sessionStorage.getItem('lectorium_admin') === '1') {
+    if (sessionGet('lectorium_admin') === '1') {
         showAdminContent();
     } else {
         $('adminLogin').style.display = 'block';
@@ -1129,17 +995,23 @@ function openAdmin() {
         $('adminError').textContent = '';
     }
     switchView('admin');
-    if (sessionStorage.getItem('lectorium_admin') !== '1') setTimeout(() => $('adminEmail')?.focus(), 50);
+    if (sessionGet('lectorium_admin') !== '1') setTimeout(() => $('adminEmail')?.focus(), 50);
 }
 
 async function adminSignIn() {
     const email = $('adminEmail').value.toLowerCase().trim();
     const pass = $('adminPass').value;
     if (!email || !pass) { $('adminError').textContent = 'Completa email y contraseña'; return; }
-    const eh = await sha256(ADMIN_SALT + email);
-    const ph = await sha256(ADMIN_SALT + pass);
+    let eh, ph;
+    try {
+        eh = await sha256(ADMIN_SALT + email);
+        ph = await sha256(ADMIN_SALT + pass);
+    } catch (e) {
+        $('adminError').textContent = e.message || 'No se pudo validar el acceso en este navegador';
+        return;
+    }
     if (eh === ADMIN_EMAIL_HASH && ph === ADMIN_PASS_HASH) {
-        sessionStorage.setItem('lectorium_admin', '1');
+        sessionSet('lectorium_admin', '1');
         $('adminEmail').value = ''; $('adminPass').value = '';
         showAdminContent();
     } else {
@@ -1159,9 +1031,14 @@ function showAdminContent() {
 
 // ---- Contador de caracteres procesados (local) ----
 function usageData() {
-    const raw = localStorage.getItem('lectorium_usage');
+    const raw = storageGet('lectorium_usage', '');
     const mesActual = new Date().toISOString().slice(0, 7); // "2026-07"
-    let d = raw ? JSON.parse(raw) : { mes: mesActual, mesChars: 0, totalChars: 0, wavenet: 0, neural2: 0, standard: 0 };
+    let d;
+    try {
+        d = raw ? JSON.parse(raw) : { mes: mesActual, mesChars: 0, totalChars: 0, wavenet: 0, neural2: 0, standard: 0 };
+    } catch {
+        d = { mes: mesActual, mesChars: 0, totalChars: 0, wavenet: 0, neural2: 0, standard: 0 };
+    }
     // Si cambió el mes, reiniciar el contador mensual (pero conservar el total)
     if (d.mes !== mesActual) { d.mes = mesActual; d.mesChars = 0; d.wavenet = 0; d.neural2 = 0; d.standard = 0; }
     return d;
@@ -1174,7 +1051,7 @@ function addUsage(chars, tipo) {
     if (tipo === 'Wavenet') d.wavenet += chars;
     else if (tipo === 'Neural2') d.neural2 += chars;
     else if (tipo === 'Standard') d.standard += chars;
-    localStorage.setItem('lectorium_usage', JSON.stringify(d));
+    storageSet('lectorium_usage', JSON.stringify(d));
     updateUsageMini();
 }
 
@@ -1205,7 +1082,7 @@ function resetUsage() {
     if (!confirm('¿Reiniciar el contador de este mes? (el total histórico se conserva)')) return;
     const d = usageData();
     d.mesChars = 0; d.wavenet = 0; d.neural2 = 0; d.standard = 0;
-    localStorage.setItem('lectorium_usage', JSON.stringify(d));
+    storageSet('lectorium_usage', JSON.stringify(d));
     renderUsage(); updateUsageMini();
     showToast('Contador del mes reiniciado', 'success');
 }
@@ -1222,7 +1099,7 @@ async function chooseMp3Folder() {
         const dir = await window.showDirectoryPicker({ mode: 'readwrite' });
         mp3DirHandle = dir;
         await dbPutHandle('mp3dir', dir);
-        localStorage.setItem('mp3dir_name', dir.name);
+        storageSet('mp3dir_name', dir.name);
         refreshFolderStatus();
         showToast('Carpeta elegida: ' + dir.name, 'success');
     } catch (e) {
@@ -1233,7 +1110,7 @@ async function chooseMp3Folder() {
 async function clearMp3Folder() {
     mp3DirHandle = null;
     try { await dbPutHandle('mp3dir', null); } catch (e) {}
-    localStorage.removeItem('mp3dir_name');
+    storageRemove('mp3dir_name');
     refreshFolderStatus();
     showToast('Carpeta fija quitada', 'success');
 }
@@ -1241,7 +1118,7 @@ async function clearMp3Folder() {
 function refreshFolderStatus() {
     const el = $('folderStatus');
     if (!el) return;
-    const name = localStorage.getItem('mp3dir_name');
+    const name = storageGet('mp3dir_name', '');
     if (name) {
         el.innerHTML = `📂 Carpeta actual: <b>${escapeHtml(name)}</b>. Los MP3 se guardarán ahí.`;
         el.style.color = 'var(--success)';
@@ -1265,7 +1142,7 @@ async function getMp3Dir() {
 }
 
 // ============ GOOGLE CLOUD TTS (voces WaveNet + MP3) ============
-let gcloudKey = localStorage.getItem('gcloud_tts_key') || '';
+let gcloudKey = storageGet('gcloud_tts_key', '');
 let gcloudVoices = [];   // voces WaveNet/Neural en español que ofrece la API
 
 const GCLOUD_ENDPOINT = 'https://texttospeech.googleapis.com/v1';
@@ -1274,13 +1151,15 @@ function saveGcloudKey() {
     const key = $('gcloudKey').value.trim();
     if (!key) { showToast('Pega tu clave de API primero', 'warning'); return; }
     gcloudKey = key;
-    localStorage.setItem('gcloud_tts_key', key);
+    if (!storageSet('gcloud_tts_key', key)) {
+        showToast('No se pudo guardar la clave en este navegador', 'warning');
+    }
     verifyGcloud();
 }
 
 function clearGcloudKey() {
     gcloudKey = '';
-    localStorage.removeItem('gcloud_tts_key');
+    storageRemove('gcloud_tts_key');
     gcloudVoices = [];
     $('gcloudKey').value = '';
     $('btnGenerate').style.display = 'none';
@@ -1430,21 +1309,53 @@ async function gcloudSynthesize(text) {
 }
 
 let cloudAudioEl = null;
+let cloudAudioUrl = null;
 let cloudPlaying = false;      // ¿reproduciendo audio de Google Cloud?
 let cloudChunks = [];          // fragmentos para el cursor en modo nube
 let cloudCum = [];             // longitudes acumuladas de caracteres
 let cloudTotalChars = 1;
 
+function cleanupCloudAudio() {
+    if (cloudAudioEl) {
+        cloudAudioEl.pause();
+        cloudAudioEl.removeAttribute('src');
+        cloudAudioEl.load();
+        cloudAudioEl = null;
+    }
+    if (cloudAudioUrl) {
+        URL.revokeObjectURL(cloudAudioUrl);
+        cloudAudioUrl = null;
+    }
+}
+
+function stopActivePlayback() {
+    if (hasSpeechSynthesis) speechSynthesis.cancel();
+    stopKeepAlive();
+    isSpeaking = false;
+    isPaused = false;
+    speechQueue = [];
+    queueIndex = 0;
+    cloudPlaying = false;
+    cleanupCloudAudio();
+    hideReadOverlay();
+    releaseWakeLock();
+    btnSpeak.innerHTML = '<span class="pic">▶</span> Leer';
+    btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
+    updatePlaybackControls();
+}
+
 // Leer con voz de Google Cloud (reproduce el MP3 en el navegador)
 async function speakCloud(text) {
     setStatus('⏳ Generando voz de alta calidad...', 'speaking');
     $('btnSpeak').disabled = true;
+    updatePlaybackControls();
     try {
         const clean = cleanForSpeech(text);
         const chunks = splitIntoChunks(clean);
         const blob = await gcloudSynthesize(text);
         const url = URL.createObjectURL(blob);
-        if (cloudAudioEl) { cloudAudioEl.pause(); }
+        cleanupCloudAudio();
+        cloudAudioUrl = url;
         cloudAudioEl = new Audio(url);
 
         // Preparar datos del cursor (posición estimada por tiempo de audio)
@@ -1457,6 +1368,7 @@ async function speakCloud(text) {
         cloudPlaying = true;
         requestWakeLock();
         btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
+        updatePlaybackControls();
 
         cloudAudioEl.ontimeupdate = () => {
             if (!cloudAudioEl.duration) return;
@@ -1468,23 +1380,29 @@ async function speakCloud(text) {
             hideReadOverlay();
             releaseWakeLock();
             setStatus('✅ Finalizado');
-            URL.revokeObjectURL(url);
+            cleanupCloudAudio();
+            updatePlaybackControls();
         };
         cloudAudioEl.onerror = () => {
             cloudPlaying = false;
             hideReadOverlay();
             releaseWakeLock();
             setStatus('⚠️ Error al reproducir');
+            cleanupCloudAudio();
+            updatePlaybackControls();
         };
         setStatus('🔊 Leyendo (Google Cloud)...', 'speaking');
-        cloudAudioEl.play();
+        await cloudAudioEl.play();
     } catch (e) {
         console.error(e);
+        cloudPlaying = false;
         showToast('Error de Google Cloud: ' + (e.message || e), 'error');
         setStatus('Listo');
         hideReadOverlay();
+        cleanupCloudAudio();
     } finally {
         $('btnSpeak').disabled = false;
+        updatePlaybackControls();
     }
 }
 
@@ -1495,9 +1413,7 @@ async function generateMp3() {
     if (!gcloudKey) { showToast('Conecta tu clave de Google Cloud primero', 'warning'); return; }
     if (!selectedIsCloud()) { showToast('Elige una voz de Google Cloud (marcadas con ☁️)', 'warning'); return; }
 
-    // Nombre automático a partir del título (sin cuadros que obliguen a nombrar)
-    const name = (currentFilename.replace(/\.txt$/, '') || 'audio')
-        .replace(/[\\/:*?"<>|]/g, '_') + '.mp3';
+    const name = makeMp3Filename(text);
 
     $('btnGenerate').disabled = true;
     setStatus('⏳ Generando MP3 con Google Cloud...', 'recording');
@@ -1532,6 +1448,25 @@ async function generateMp3() {
     }
 }
 
+function makeMp3Filename(text) {
+    const baseFromFile = currentFilename && currentFilename !== 'sin_titulo.txt'
+        ? currentFilename.replace(/\.txt$/i, '')
+        : '';
+    const baseFromText = cleanForSpeech(text)
+        .split(/\s+/)
+        .slice(0, 8)
+        .join('_');
+    const base = (baseFromFile || baseFromText || 'audio')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[\\/:*?"<>|]/g, '_')
+        .replace(/[^\w-]+/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .slice(0, 80) || 'audio';
+    return `${base}.mp3`;
+}
+
 // ============ VOCES ============
 // Mapea el código de idioma a un país legible
 function paisDeLang(lang) {
@@ -1555,7 +1490,21 @@ function pickDefaultFree(list) {
 }
 
 function populateVoices() {
-    voices = speechSynthesis.getVoices();
+    if (!hasSpeechSynthesis) {
+        voices = [];
+        voiceSelect.innerHTML = '';
+        const opt = document.createElement('option');
+        opt.textContent = gcloudVoices.length > 0
+            ? 'Selecciona una voz de Google Cloud'
+            : 'TTS del navegador no disponible';
+        voiceSelect.appendChild(opt);
+        const hint = $('voiceHint');
+        if (hint) hint.textContent = gcloudVoices.length > 0
+            ? 'Usa una voz ☁️ para leer y generar MP3.'
+            : 'Este navegador no expone lectura TTS local.';
+    } else {
+        voices = speechSynthesis.getVoices();
+    }
 
     // TODAS las voces en español del navegador (no solo "Google", no solo es-ES/es-US)
     let list = voices.filter(v => v.lang.toLowerCase().replace('_', '-').startsWith('es'));
@@ -1617,7 +1566,13 @@ function populateVoices() {
     }
 
     const hint = $('voiceHint');
-    if (list.length === 0 && gcloudVoices.length === 0) {
+    btnSpeak.disabled = !hasSpeechSynthesis && gcloudVoices.length === 0;
+    if (!hasSpeechSynthesis && gcloudVoices.length === 0) {
+        const opt = document.createElement('option');
+        opt.textContent = 'TTS del navegador no disponible';
+        voiceSelect.appendChild(opt);
+        hint.textContent = 'Conecta Google Cloud o abre la app en un navegador con lectura TTS.';
+    } else if (list.length === 0 && gcloudVoices.length === 0) {
         const opt = document.createElement('option');
         opt.textContent = 'No hay voces en español disponibles';
         voiceSelect.appendChild(opt);
@@ -1658,20 +1613,21 @@ function setStatus(msg, type) {
     visualizer.classList.toggle('active', type === 'speaking' || type === 'recording');
 }
 
+function updatePlaybackControls() {
+    const active = isSpeaking || cloudPlaying;
+    btnPause.disabled = !active;
+    btnBack.disabled = !active;
+    btnForward.disabled = !active;
+    btnStop.disabled = !active;
+}
+
 // ============ LECTURA ============
 function speak() {
     const text = editor.value.trim();
     if (!text) { showToast('Escribe algo primero', 'warning'); return; }
+    stopActivePlayback();
     if (selectedIsCloud()) { speakCloud(text); return; }
     startSpeech(text);
-}
-
-function speakSelection() {
-    const sel = editor.value.substring(editor.selectionStart, editor.selectionEnd);
-    if (!sel.trim()) { showToast('Selecciona texto primero', 'warning'); return; }
-    if (selectedIsCloud()) { speakCloud(sel.trim()); showToast('Leyendo selección...', 'success'); return; }
-    startSpeech(sel.trim());
-    showToast('Leyendo selección...', 'success');
 }
 
 // Quita símbolos markdown para que el lector no los pronuncie
@@ -1816,6 +1772,10 @@ function seekCloudToChunk(i) {
 }
 
 function startSpeech(text) {
+    if (!hasSpeechSynthesis) {
+        showToast('Este navegador no soporta lectura TTS local. Prueba con Google Cloud.', 'warning');
+        return;
+    }
     speechSynthesis.cancel();
     speechQueue = splitIntoChunks(cleanForSpeech(text));
     queueIndex = 0;
@@ -1824,6 +1784,7 @@ function startSpeech(text) {
     requestWakeLock();
     btnSpeak.innerHTML = '<span class="pic">🔁</span> Repetir';
     btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
+    updatePlaybackControls();
     showReadOverlay(speechQueue);
     startKeepAlive();
     speakNextChunk();
@@ -1871,7 +1832,7 @@ function makeUtterance(text) {
 function startKeepAlive() {
     stopKeepAlive();
     keepAliveTimer = setInterval(() => {
-        if (speechSynthesis.speaking && !isPaused) speechSynthesis.resume();
+        if (hasSpeechSynthesis && speechSynthesis.speaking && !isPaused) speechSynthesis.resume();
     }, 10000);
 }
 
@@ -1906,7 +1867,7 @@ function speakNextChunk() {
         setStatus('❌ Error de lectura');
         finishSpeechState();
     };
-    speechSynthesis.speak(u);
+    if (hasSpeechSynthesis) speechSynthesis.speak(u);
 }
 
 function onSpeechFinished() {
@@ -1924,6 +1885,7 @@ function finishSpeechState() {
     releaseWakeLock();
     btnSpeak.innerHTML = '<span class="pic">▶</span> Leer';
     btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
+    updatePlaybackControls();
 }
 
 function togglePause() {
@@ -1943,24 +1905,19 @@ function togglePause() {
     if (!isSpeaking) return;
     if (isPaused) {
         isPaused = false;
-        speechSynthesis.resume();
+        if (hasSpeechSynthesis) speechSynthesis.resume();
         btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
         setStatus('🔊 Leyendo...', 'speaking');
     } else {
         isPaused = true;
-        speechSynthesis.pause();
+        if (hasSpeechSynthesis) speechSynthesis.pause();
         btnPause.innerHTML = '<span class="pic">▶</span> Reanudar';
         setStatus('⏸️ Pausado', 'paused');
     }
 }
 
 function stop() {
-    finishSpeechState();
-    speechSynthesis.cancel();
-    if (cloudAudioEl) { cloudAudioEl.pause(); cloudAudioEl.currentTime = 0; }
-    cloudPlaying = false;
-    hideReadOverlay();
-    releaseWakeLock();
+    stopActivePlayback();
     setStatus('⏹️ Detenido');
 }
 
@@ -1969,7 +1926,7 @@ function skipBack() {
     if (cloudPlaying && cloudAudioEl) { seekCloudToChunk(currentCloudChunk() - 1); return; }
     if (!isSpeaking) return;
     queueIndex = Math.max(0, queueIndex - 3);
-    speechSynthesis.cancel();
+    if (hasSpeechSynthesis) speechSynthesis.cancel();
     speakNextChunk();
 }
 
@@ -1978,117 +1935,9 @@ function skipForward() {
     if (cloudPlaying && cloudAudioEl) { seekCloudToChunk(currentCloudChunk() + 1); return; }
     if (!isSpeaking) return;
     queueIndex = Math.min(speechQueue.length, queueIndex + 1);
-    speechSynthesis.cancel();
+    if (hasSpeechSynthesis) speechSynthesis.cancel();
     if (queueIndex >= speechQueue.length) { onSpeechFinished(); return; }
     speakNextChunk();
-}
-
-// ============ GUARDAR TEXTO ============
-function saveText() {
-    $('saveFilename').value = currentFilename.replace(/\.txt$/, '') + '_' + new Date().toISOString().slice(0, 10) + '.txt';
-    openModal('saveModal');
-    $('saveFilename').focus();
-}
-
-async function confirmSaveText() {
-    let name = $('saveFilename').value.trim();
-    if (!name) name = 'texto_' + Date.now() + '.txt';
-    if (!name.endsWith('.txt')) name += '.txt';
-
-    const existing = savedTexts.find(t => t.name === name);
-    if (existing) {
-        existing.content = editor.value;
-        existing.date = new Date().toISOString();
-    } else {
-        savedTexts.unshift({ id: Date.now(), name, content: editor.value, date: new Date().toISOString() });
-    }
-    localStorage.setItem('tts_texts', JSON.stringify(savedTexts));
-
-    currentFilename = name;
-    updateTabName(name);
-    closeModal('saveModal');
-    renderFileList();
-    updateCounts();
-    showToast((existing ? 'Texto actualizado' : 'Texto guardado') + ': ' + name, 'success');
-}
-
-function updateTabName(name) {
-    const tab = $('tab-untitled');
-    if (tab) tab.textContent = name;
-}
-
-// ============ ABRIR ARCHIVO SUELTO ============
-function openFile(input) {
-    const file = input.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        editor.value = e.target.result;
-        currentFilename = file.name;
-        updateTabName(file.name);
-        updateCharCount();
-        showToast('Archivo cargado: ' + file.name, 'success');
-    };
-    reader.onerror = () => showToast('No se pudo leer el archivo', 'error');
-    reader.readAsText(file);
-    input.value = '';
-}
-
-// ============ TEXTOS GUARDADOS ============
-function loadSavedText(id) {
-    const item = savedTexts.find(t => t.id === id);
-    if (!item) return;
-    editor.value = item.content;
-    currentFilename = item.name;
-    updateTabName(item.name);
-    updateCharCount();
-    switchView('editor');
-    showToast('Cargado: ' + item.name, 'success');
-}
-
-function deleteSavedText(id) {
-    savedTexts = savedTexts.filter(t => t.id !== id);
-    localStorage.setItem('tts_texts', JSON.stringify(savedTexts));
-    renderFileList();
-    updateCounts();
-    showToast('Texto eliminado', 'success');
-}
-
-function downloadSavedText(id) {
-    const item = savedTexts.find(t => t.id === id);
-    if (!item) return;
-    downloadFile(item.content, item.name, 'text/plain');
-}
-
-function exportAllTexts() {
-    if (savedTexts.length === 0) { showToast('No hay textos para exportar', 'warning'); return; }
-    const content = savedTexts.map(t => `=== ${t.name} ===\n${t.content}\n\n`).join('');
-    downloadFile(content, 'todos_los_textos.txt', 'text/plain');
-    showToast('Todos los textos exportados', 'success');
-}
-
-function downloadCurrentText() {
-    downloadFile(editor.value, currentFilename, 'text/plain');
-    showToast('Texto descargado', 'success');
-}
-
-// ============ RENDER LISTAS ============
-function renderFileList() {
-    const container = $('fileList');
-    if (!container) return;
-    if (savedTexts.length === 0) {
-        container.innerHTML = '<div class="gh-empty"><span class="icon">📄</span>No hay textos guardados aún</div>';
-        return;
-    }
-    container.innerHTML = savedTexts.map(t => `
-        <div class="gh-file-item" onclick="loadSavedText(${t.id})">
-            <span class="f-icon">📄</span>
-            <span class="f-name">${escapeHtml(t.name)}</span>
-            <span class="f-date">${formatDate(t.date)}</span>
-            <span class="f-del" onclick="event.stopPropagation();downloadSavedText(${t.id})" title="Descargar">⬇️</span>
-            <span class="f-del" onclick="event.stopPropagation();deleteSavedText(${t.id})" title="Eliminar">🗑️</span>
-        </div>
-    `).join('');
 }
 
 // ============ VISTAS ============
@@ -2103,30 +1952,15 @@ function switchView(view) {
 }
 
 // ============ UTILIDADES ============
-function downloadFile(content, filename, mimeType) {
-    const blob = new Blob([content], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-}
-
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
 
-function formatDate(iso) {
-    const d = new Date(iso);
-    return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-
 function clearText() {
     editor.value = '';
     currentFilename = 'sin_titulo.txt';
-    updateTabName('sin_titulo.txt');
     updateCharCount();
     showToast('Editor limpiado', 'success');
 }
@@ -2184,17 +2018,6 @@ function compactText() {
     showToast(quitados > 0 ? `Compactado (${quitados} caracteres de más quitados)` : 'Ya estaba compacto', 'success');
 }
 
-// ============ MODALES ============
-function openModal(id) { $(id).classList.add('show'); }
-function closeModal(id) { $(id).classList.remove('show'); }
-function anyModalOpen() { return document.querySelector('.gh-modal-overlay.show'); }
-
-$('saveFilename').addEventListener('keydown', e => { if (e.key === 'Enter') confirmSaveText(); });
-
-document.querySelectorAll('.gh-modal-overlay').forEach(overlay => {
-    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('show'); });
-});
-
 // ============ TOAST ============
 let toastTimeout;
 function showToast(msg, type) {
@@ -2211,8 +2034,6 @@ function showToast(msg, type) {
 // ============ TECLADO ============
 document.addEventListener('keydown', (e) => {
     if (e.code === 'Escape') {
-        const open = anyModalOpen();
-        if (open) { open.classList.remove('show'); return; }
         stop();
         return;
     }
