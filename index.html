@@ -92,16 +92,6 @@
             color: inherit;
             cursor: pointer;
         }
-        .gh-logo {
-            width: 32px; height: 32px;
-            background: var(--text);
-            border-radius: 3px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-            font-size: 16px;
-        }
         .gh-title {
             font-family: 'Cormorant Garamond', Georgia, serif;
             font-size: 1.9rem;
@@ -113,16 +103,6 @@
             overflow-wrap: anywhere;
         }
         .gh-title span { color: var(--accent); font-weight: 500; }
-        .gh-badge {
-            background: var(--accent-light);
-            color: var(--accent);
-            font-size: 12px;
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 100px;
-            border: 1px solid #b6e3ff;
-        }
-
         /* ===== MAIN LAYOUT ===== */
         .gh-layout {
             max-width: 1100px;
@@ -170,22 +150,6 @@
             padding: 16px;
             background: var(--bg-secondary);
         }
-        .gh-footer .gh-foot-name {
-            font-weight: 600;
-            color: var(--text);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .gh-footer .gh-foot-ver {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            color: var(--text-secondary);
-            font-size: 12px;
-            font-weight: 600;
-            padding: 2px 10px;
-            border-radius: 100px;
-        }
         .gh-footer-folder {
             color: var(--success);
             font-size: 12px;
@@ -228,14 +192,8 @@
         .gh-ribbon-btn:active { background: var(--bg-tertiary); }
         .gh-ribbon-btn.active { background: var(--accent-light); color: var(--accent); border-color: #b6e3ff; }
         .gh-ribbon-btn.active .rlabel { color: var(--accent); }
-        .gh-ribbon-btn .ic { display: none; }
         .gh-ribbon-btn .rlabel { font-size: 13px; }
-        /* Carpeta elegida = verde */
-        .gh-ribbon-btn.folder.connected .rlabel { color: var(--success); }
-        .gh-ribbon-btn.folder.connected .ic { filter: none; }
         .gh-ribbon-sep { width: 1px; align-self: stretch; background: var(--border); margin: 2px 6px; flex-shrink: 0; }
-        /* Menú sándwich: oculto en escritorio, visible en móvil */
-        .ribbon-hamburger { display: none; }
         .gh-ribbon-items { display: flex; align-items: center; justify-content: flex-start; gap: 8px; flex: 1; }
 
         /* ===== PLAYER (controles bajo el área de texto) ===== */
@@ -303,7 +261,6 @@
             box-shadow: inset 0 2px 3px rgba(0,0,0,0.25);
             transform: translateY(1px);
         }
-        .gh-player-spacer { flex: 1; min-width: 12px; }
         .gh-player-btn:disabled { opacity: 0.4; cursor: not-allowed; }
         /* ===== CENTER PANEL ===== */
         .gh-main {
@@ -337,17 +294,6 @@
             border-color: var(--success);
         }
         .gh-btn-primary:hover { background: #196c2e; }
-        .gh-btn-danger {
-            color: var(--danger);
-            border-color: var(--danger);
-        }
-        .gh-btn-danger:hover { background: var(--danger-bg); }
-        .gh-btn-accent {
-            background: var(--accent);
-            color: #fff;
-            border-color: var(--accent);
-        }
-        .gh-btn-accent:hover { background: var(--accent-hover); }
         .gh-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
@@ -428,7 +374,6 @@
         }
         .gh-statusbar .dot.speaking { background: var(--accent); animation: blink 1s infinite; }
         .gh-statusbar .dot.recording { background: var(--danger); animation: blink 0.5s infinite; }
-        .gh-statusbar .dot.paused { background: var(--warning); }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
         /* ===== RIGHT SIDEBAR ===== */
@@ -483,37 +428,6 @@
             cursor: pointer;
         }
         .gh-control select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
-
-        .gh-range-wrap {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .gh-range-wrap input[type="range"] {
-            -webkit-appearance: none;
-            flex: 1;
-            height: 5px;
-            border-radius: 3px;
-            background: var(--bg-tertiary);
-            outline: none;
-        }
-        .gh-range-wrap input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 16px; height: 16px;
-            border-radius: 50%;
-            background: var(--accent);
-            cursor: pointer;
-            border: 2px solid #fff;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-        }
-        .gh-range-val {
-            min-width: 40px;
-            text-align: right;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--accent);
-            font-family: var(--font-mono);
-        }
 
         /* Toast */
         .gh-toast {
@@ -634,7 +548,6 @@
                 padding: 12px 8px;
                 font-size: 13px;
             }
-            .gh-player-spacer { display: none; }
             .gh-player-btn.generate { grid-column: auto; }
             .gh-panel { margin-bottom: 10px; }
             .gh-panel-body { padding: 12px; }
@@ -662,7 +575,6 @@
                 box-shadow: 0 8px 18px rgba(31,35,40,0.08);
             }
             .gh-ribbon.collapsed { display: none; }
-            .ribbon-hamburger { display: none; }
             .gh-ribbon-items {
                 display: flex;
                 flex-direction: column;
@@ -671,7 +583,6 @@
                 gap: 6px;
                 margin-left: 0;
             }
-            .gh-ribbon.open .gh-ribbon-items { display: flex; }
             .gh-ribbon.collapsed .gh-ribbon-items { display: none; }
             .gh-ribbon-items .gh-ribbon-btn {
                 width: 100%;
@@ -688,7 +599,6 @@
                 background: var(--accent-light);
                 border-color: #b6e3ff;
             }
-            .gh-ribbon-items .gh-ribbon-btn .ic { display: none; }
             .gh-ribbon-items .gh-ribbon-btn .rlabel {
                 font-size: 16px;
                 font-weight: 700;
@@ -715,20 +625,16 @@
 <div class="gh-ribbon collapsed" id="ribbon">
     <div class="gh-ribbon-items" id="ribbonItems">
         <button class="gh-ribbon-btn" id="ribbonInicio" onclick="switchView('editor')" title="Ir al editor">
-            <span class="ic">🏠</span>
             <span class="rlabel">Inicio</span>
         </button>
         <div class="gh-ribbon-sep"></div>
         <button class="gh-ribbon-btn" onclick="stripFormat()" title="Quitar etiquetas HTML y marcas Markdown (dejar texto plano)">
-            <span class="ic">&lt;/&gt;</span>
             <span class="rlabel">Quitar formato</span>
         </button>
         <button class="gh-ribbon-btn" onclick="compactText()" title="Quitar líneas en blanco y espacios de más">
-            <span class="ic">↕</span>
             <span class="rlabel">Compactar</span>
         </button>
         <button class="gh-ribbon-btn" onclick="clearText()" title="Limpiar el editor">
-            <span class="ic">🧹</span>
             <span class="rlabel">Limpiar</span>
         </button>
     </div>
@@ -868,9 +774,9 @@
 
 <script>
 // ============ ESTADO ============
+const APP_VERSION = '24.7';
 let voices = [];
 let isSpeaking = false;
-let isPaused = false;
 let currentFilename = 'sin_titulo.txt';
 let speechQueue = [];
 let queueIndex = 0;
@@ -952,9 +858,6 @@ const statusMsg = $('statusMsg');
 const charInfo = $('charInfo');
 const visualizer = $('visualizer');
 const btnSpeak = $('btnSpeak');
-const btnPause = $('btnPause');
-const btnBack = $('btnBack');
-const btnForward = $('btnForward');
 
 // ============ INIT ============
 function updateAppHeight() {
@@ -979,7 +882,6 @@ async function init() {
     }
     updateUsageMini();
     refreshFolderStatus();
-    updatePlaybackControls();
 
     // Menú sándwich (móvil): cerrar al pulsar una opción
     const items = $('ribbonItems');
@@ -996,14 +898,14 @@ async function init() {
     document.addEventListener('visibilitychange', async () => {
         if (document.visibilityState === 'visible') {
             if (isSpeaking || cloudPlaying) await requestWakeLock();
-            if (hasSpeechSynthesis && isSpeaking && !isPaused) { try { speechSynthesis.resume(); } catch (e) {} }
+            if (hasSpeechSynthesis && isSpeaking) { try { speechSynthesis.resume(); } catch (e) {} }
         }
     });
     window.addEventListener('pagehide', stopActivePlayback);
 
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
-    if (fc) fc.textContent = `© Copyright ${new Date().getFullYear()} Lectorium v24.6`;
+    if (fc) fc.textContent = `© Copyright ${new Date().getFullYear()} Lectorium v${APP_VERSION}`;
 }
 
 // Alterna el menú sándwich en móvil
@@ -1406,7 +1308,6 @@ function stopActivePlayback() {
     if (hasSpeechSynthesis) speechSynthesis.cancel();
     stopKeepAlive();
     isSpeaking = false;
-    isPaused = false;
     speechQueue = [];
     queueIndex = 0;
     cloudPlaying = false;
@@ -1414,15 +1315,12 @@ function stopActivePlayback() {
     hideReadOverlay();
     releaseWakeLock();
     btnSpeak.innerHTML = '<span class="pic">▶</span> Leer';
-    if (btnPause) btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
-    updatePlaybackControls();
 }
 
 // Leer con voz de Google Cloud (reproduce el MP3 en el navegador)
 async function speakCloud(text) {
     setStatus('⏳ Generando voz de alta calidad...', 'speaking');
     $('btnSpeak').disabled = true;
-    updatePlaybackControls();
     try {
         const clean = cleanForSpeech(text);
         const chunks = splitIntoChunks(clean);
@@ -1442,8 +1340,6 @@ async function speakCloud(text) {
         cloudPlaying = true;
         requestWakeLock();
         btnSpeak.innerHTML = '<span class="pic">⏹</span> Stop';
-        if (btnPause) btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
-        updatePlaybackControls();
 
         cloudAudioEl.onended = () => {
             cloudPlaying = false;
@@ -1451,7 +1347,6 @@ async function speakCloud(text) {
             releaseWakeLock();
             setStatus('✅ Finalizado');
             cleanupCloudAudio();
-            updatePlaybackControls();
         };
         cloudAudioEl.onerror = () => {
             cloudPlaying = false;
@@ -1459,7 +1354,6 @@ async function speakCloud(text) {
             releaseWakeLock();
             setStatus('⚠️ Error al reproducir');
             cleanupCloudAudio();
-            updatePlaybackControls();
         };
         setStatus('🔊 Leyendo (Google Cloud)...', 'speaking');
         await cloudAudioEl.play();
@@ -1473,7 +1367,6 @@ async function speakCloud(text) {
         cleanupCloudAudio();
     } finally {
         $('btnSpeak').disabled = false;
-        updatePlaybackControls();
     }
 }
 
@@ -1684,13 +1577,6 @@ function setStatus(msg, type) {
     visualizer.classList.toggle('active', type === 'speaking' || type === 'recording');
 }
 
-function updatePlaybackControls() {
-    const active = isSpeaking || cloudPlaying;
-    if (btnPause) btnPause.disabled = !active;
-    if (btnBack) btnBack.disabled = !active;
-    if (btnForward) btnForward.disabled = !active;
-}
-
 // ============ LECTURA ============
 function toggleSpeakStop() {
     if (isSpeaking || cloudPlaying) {
@@ -1867,21 +1753,6 @@ function hideReadOverlay() {
 }
 
 // ---- utilidades del cursor en modo nube (audio único, posición por tiempo) ----
-function currentCloudChunk() {
-    if (!cloudAudioEl || !cloudAudioEl.duration) return 0;
-    const pos = (cloudAudioEl.currentTime / cloudAudioEl.duration) * cloudTotalChars;
-    const i = cloudCum.findIndex(end => pos < end);
-    return i < 0 ? cloudChunks.length - 1 : i;
-}
-
-function seekCloudToChunk(i) {
-    if (!cloudAudioEl || !cloudAudioEl.duration) return;
-    i = Math.max(0, Math.min(cloudChunks.length - 1, i));
-    const startChars = i === 0 ? 0 : cloudCum[i - 1];
-    cloudAudioEl.currentTime = Math.max(0, (startChars / cloudTotalChars) * cloudAudioEl.duration);
-    highlightWordGlobal(startChars);
-}
-
 function startSpeech(text) {
     if (!hasSpeechSynthesis) {
         showToast('Este navegador no soporta lectura TTS local. Prueba con Google Cloud.', 'warning');
@@ -1891,11 +1762,8 @@ function startSpeech(text) {
     speechQueue = splitIntoChunks(cleanForSpeech(text));
     queueIndex = 0;
     isSpeaking = true;
-    isPaused = false;
     requestWakeLock();
     btnSpeak.innerHTML = '<span class="pic">⏹</span> Stop';
-    if (btnPause) btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
-    updatePlaybackControls();
     showReadOverlay(speechQueue);
     startKeepAlive();
     speakNextChunk();
@@ -1943,7 +1811,7 @@ function makeUtterance(text) {
 function startKeepAlive() {
     stopKeepAlive();
     keepAliveTimer = setInterval(() => {
-        if (hasSpeechSynthesis && speechSynthesis.speaking && !isPaused) speechSynthesis.resume();
+        if (hasSpeechSynthesis && speechSynthesis.speaking) speechSynthesis.resume();
     }, 10000);
 }
 
@@ -1988,67 +1856,17 @@ function onSpeechFinished() {
 
 function finishSpeechState() {
     isSpeaking = false;
-    isPaused = false;
     speechQueue = [];
     queueIndex = 0;
     stopKeepAlive();
     hideReadOverlay();
     releaseWakeLock();
     btnSpeak.innerHTML = '<span class="pic">▶</span> Leer';
-    if (btnPause) btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
-    updatePlaybackControls();
-}
-
-function togglePause() {
-    // Modo Google Cloud (audio)
-    if (cloudPlaying && cloudAudioEl) {
-        if (cloudAudioEl.paused) {
-            cloudAudioEl.play();
-            if (btnPause) btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
-            setStatus('🔊 Leyendo (Google Cloud)...', 'speaking');
-        } else {
-            cloudAudioEl.pause();
-            if (btnPause) btnPause.innerHTML = '<span class="pic">▶</span> Reanudar';
-            setStatus('⏸️ Pausado', 'paused');
-        }
-        return;
-    }
-    if (!isSpeaking) return;
-    if (isPaused) {
-        isPaused = false;
-        if (hasSpeechSynthesis) speechSynthesis.resume();
-        if (btnPause) btnPause.innerHTML = '<span class="pic">⏸</span> Pausa';
-        setStatus('🔊 Leyendo...', 'speaking');
-    } else {
-        isPaused = true;
-        if (hasSpeechSynthesis) speechSynthesis.pause();
-        if (btnPause) btnPause.innerHTML = '<span class="pic">▶</span> Reanudar';
-        setStatus('⏸️ Pausado', 'paused');
-    }
 }
 
 function stop() {
     stopActivePlayback();
     setStatus('⏹️ Detenido');
-}
-
-// Retroceder un fragmento (nube) o ~3 (navegador)
-function skipBack() {
-    if (cloudPlaying && cloudAudioEl) { seekCloudToChunk(currentCloudChunk() - 1); return; }
-    if (!isSpeaking) return;
-    queueIndex = Math.max(0, queueIndex - 3);
-    if (hasSpeechSynthesis) speechSynthesis.cancel();
-    speakNextChunk();
-}
-
-// Avanzar un fragmento (nube o navegador)
-function skipForward() {
-    if (cloudPlaying && cloudAudioEl) { seekCloudToChunk(currentCloudChunk() + 1); return; }
-    if (!isSpeaking) return;
-    queueIndex = Math.min(speechQueue.length, queueIndex + 1);
-    if (hasSpeechSynthesis) speechSynthesis.cancel();
-    if (queueIndex >= speechQueue.length) { onSpeechFinished(); return; }
-    speakNextChunk();
 }
 
 // ============ VISTAS ============
