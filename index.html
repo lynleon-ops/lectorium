@@ -610,16 +610,15 @@
                 max-width: none;
                 justify-content: flex-start;
             }
-            /* Ribbon como menú sándwich */
+            /* Ribbon móvil */
             .gh-ribbon { flex-wrap: wrap; overflow: visible; }
-            .ribbon-hamburger { display: inline-flex; }
+            .ribbon-hamburger { display: none; }
             .gh-ribbon-items {
-                display: none;
+                display: flex;
                 flex-direction: column;
                 align-items: stretch;
                 width: 100%;
                 gap: 4px;
-                margin-top: 8px;
             }
             .gh-ribbon.open .gh-ribbon-items { display: flex; }
             .gh-ribbon-items .gh-ribbon-btn {
@@ -953,7 +952,7 @@ async function init() {
 
     // Copyright del footer con el año actual
     const fc = $('footerCopyright');
-    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v23.5. Todos los derechos reservados.`;
+    if (fc) fc.textContent = `© ${new Date().getFullYear()} Lectorium v23.7. Todos los derechos reservados.`;
 }
 
 // Alterna el menú sándwich en móvil
