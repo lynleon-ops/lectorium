@@ -682,12 +682,6 @@
             <svg class="ricon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10 12 3l9 7M5 9v12h5v-7h4v7h5V9"/></svg><span class="rlabel">Inicio</span>
         </button>
         <div class="gh-ribbon-sep"></div>
-        <button class="gh-ribbon-btn" onclick="stripFormat()" title="Quitar etiquetas HTML y marcas Markdown (dejar texto plano)">
-            <svg class="ricon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h14M11 4 7 20M3 20h8M16 14l6 6m0-6-6 6"/></svg><span class="rlabel">Quitar formato</span>
-        </button>
-        <button class="gh-ribbon-btn" onclick="compactText()" title="Quitar líneas en blanco y espacios de más">
-            <svg class="ricon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h16M4 15h16M12 2v4m-3-3 3 3 3-3M12 22v-4m-3 3 3-3 3 3"/></svg><span class="rlabel">Compactar</span>
-        </button>
         <button class="gh-ribbon-btn" onclick="clearText()" title="Limpiar el editor">
             <svg class="ricon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 14 9-10 8 8-8 9H9l-5-5v-2ZM9 9l8 8M13 21h9"/></svg><span class="rlabel">Limpiar</span>
         </button>
@@ -707,7 +701,7 @@
                     <div id="readOverlay" class="gh-read-overlay" aria-hidden="true"></div>
                 </div>
                 <div class="gh-statusbar">
-                    <span><span class="dot" id="statusDot"></span><span id="statusMsg" aria-live="polite">Listo</span><span class="gh-visualizer" id="visualizer">
+                    <span id="playbackStatus" hidden><span class="dot" id="statusDot"></span><span id="statusMsg" aria-live="polite"></span><span class="gh-visualizer" id="visualizer">
                         <span class="gh-vbar"></span><span class="gh-vbar"></span><span class="gh-vbar"></span>
                         <span class="gh-vbar"></span><span class="gh-vbar"></span><span class="gh-vbar"></span>
                         <span class="gh-vbar"></span><span class="gh-vbar"></span><span class="gh-vbar"></span>
@@ -789,14 +783,14 @@
                 <div class="gh-admin-card">
                     <div style="font-weight:600;font-size:14px;margin-bottom:8px">📁 Carpeta para los MP3</div>
                     <div id="folderStatus" style="font-size:12px;margin-bottom:8px;color:var(--text-secondary)">
-                        Opcional. Sin carpeta, los MP3 se descargan directo a tu carpeta de Descargas.
+                        Selecciona una carpeta dentro de iCloud Drive. Es obligatoria para grabar MP3.
                     </div>
                     <div style="display:flex;gap:6px">
                         <button class="gh-btn gh-btn-primary" style="flex:1" onclick="chooseMp3Folder()">Elegir carpeta</button>
                         <button class="gh-btn" onclick="clearMp3Folder()" title="Quitar carpeta fija">Quitar</button>
                     </div>
                     <div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5">
-                        Opcional. Al elegir una carpeta, los MP3 se guardarán ahí por defecto (solo Chrome/Edge de escritorio).
+                        Al grabar se solicitarán el nombre y la carpeta de iCloud Drive. El navegador no permite verificar su ruta completa.
                     </div>
                 </div>
 
@@ -827,7 +821,7 @@
 
 <script>
 // ============ ESTADO ============
-const APP_VERSION = '24.10';
+const APP_VERSION = '24.13';
 let voices = [];
 let isSpeaking = false;
 let currentFilename = 'sin_titulo.txt';
@@ -1140,13 +1134,13 @@ async function clearMp3Folder() {
 function refreshFolderStatus() {
     const el = $('folderStatus');
     const name = storageGet('mp3dir_name', '');
-    updateFooterFolderStatus(name || 'Lectorium');
+    updateFooterFolderStatus(name);
     if (!el) return;
     if (name) {
-        el.innerHTML = `📂 Carpeta actual: <b>${escapeHtml(name)}</b>. Los MP3 se guardarán ahí.`;
+        el.innerHTML = `📂 Carpeta actual: <b>${escapeHtml(name)}</b>. Al grabar, confirma una carpeta dentro de iCloud Drive.`;
         el.style.color = 'var(--success)';
     } else {
-        el.textContent = 'Opcional. Sin carpeta, los MP3 se descargan directo a tu carpeta de Descargas.';
+        el.textContent = 'Selecciona una carpeta dentro de iCloud Drive. Es obligatoria para grabar MP3.';
         el.style.color = 'var(--text-secondary)';
     }
 }
@@ -1154,7 +1148,7 @@ function refreshFolderStatus() {
 function updateFooterFolderStatus(name) {
     const el = $('footerFolderStatus');
     if (!el) return;
-    el.textContent = `Folder: ${name} ✓`;
+    el.textContent = name ? `Carpeta: ${name}` : 'Carpeta de iCloud pendiente';
 }
 
 // Recuperar el handle de la carpeta guardada y comprobar permiso
@@ -1423,42 +1417,51 @@ async function speakCloud(text) {
     }
 }
 
-// Generar y DESCARGAR el MP3 con Google Cloud
+// Pedir nombre y destino antes de generar audio.
 async function generateMp3() {
+    cleanEditorAutomatically();
     const text = editor.value.trim();
     if (!text) { showToast('Escribe algo primero', 'warning'); return; }
     if (!gcloudKey) { showToast('Conecta tu clave de Google Cloud primero', 'warning'); return; }
     if (!selectedIsCloud()) { showToast('Elige una voz de Google Cloud (marcadas con ☁️)', 'warning'); return; }
-
-    const name = makeMp3Filename(text);
-
-    $('btnGenerate').disabled = true;
-    setStatus('⏳ Generando MP3 con Google Cloud...', 'recording');
-    try {
-        const blob = await gcloudSynthesize(text);
-
-        // Si el usuario eligió una carpeta (OPCIONAL), guardar ahí directo
-        const dir = await getMp3Dir();
-        if (dir) {
-            const fh = await dir.getFileHandle(name, { create: true });
-            const w = await fh.createWritable();
-            await w.write(blob); await w.close();
-            setStatus('✅ MP3 guardado');
-            showToast(`✅ Guardado en tu carpeta: ${name}`, 'success');
-            return;
+    if (!('showDirectoryPicker' in window)) {
+        showToast('Para guardar en una carpeta de iCloud Drive, abre este HTML en Chrome o Edge de escritorio. No se ha generado audio.', 'warning');
+        return;
+    }
+    let name;
+    while (true) {
+        const answer = prompt('Nombre del archivo MP3. Después selecciona una carpeta dentro de iCloud Drive.', makeMp3Filename(text));
+        if (answer === null) return;
+        const base = answer.trim().replace(/\.mp3$/i, '').trim();
+        if (!base || base === '.' || base === '..' || /[\\/:*?"<>|\x00-\x1f]/.test(base) || base.length > 120) {
+            alert('Introduce un nombre válido de hasta 120 caracteres, sin barras ni caracteres especiales de archivo.');
+            continue;
         }
-
-        // Sin carpeta: descarga directa a "Descargas", sin diálogos
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = name;
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        setStatus('✅ MP3 descargado');
-        showToast('✅ MP3 descargado: ' + name, 'success');
+        name = base + '.mp3';
+        break;
+    }
+    $('btnGenerate').disabled = true;
+    try {
+        const dir = await window.showDirectoryPicker({ mode: 'readwrite', id: 'lectorium-mp3', ...(mp3DirHandle ? { startIn: mp3DirHandle } : {}) });
+        if (!confirm('Carpeta seleccionada: ' + dir.name + '\n\n¿Confirmas que esta carpeta está dentro de iCloud Drive? El navegador no permite verificar la ruta completa.')) return;
+        let existing = null;
+        try { existing = await dir.getFileHandle(name); }
+        catch (e) { if (e.name !== 'NotFoundError') throw e; }
+        if (existing && !confirm('Ya existe «' + name + '». ¿Quieres reemplazarlo?')) return;
+        mp3DirHandle = dir;
+        try { await dbPutHandle('mp3dir', dir); } catch (e) { /* La carpeta sigue disponible en esta sesión. */ }
+        storageSet('mp3dir_name', dir.name);
+        refreshFolderStatus();
+        setStatus('⏳ Generando MP3 con Google Cloud...', 'recording');
+        const blob = await gcloudSynthesize(text);
+        const fh = existing || await dir.getFileHandle(name, { create: true });
+        const writer = await fh.createWritable();
+        try { await writer.write(blob); await writer.close(); }
+        catch (e) { try { await writer.abort(); } catch (_) {} throw e; }
+        setStatus('✅ MP3 guardado');
+        showToast('Guardado en ' + dir.name + ': ' + name, 'success');
     } catch (e) {
-        console.error(e);
-        showToast('Error al generar MP3: ' + (e.message || e), 'error');
+        if (e.name !== 'AbortError') showToast('No se pudo guardar el MP3: ' + (e.message || e), 'error');
         setStatus('Listo');
     } finally {
         $('btnGenerate').disabled = false;
@@ -1615,7 +1618,15 @@ function getSelectedVoice() {
 }
 
 // ============ CONTADOR ============
-editor.addEventListener('input', updateCharCount);
+editor.addEventListener('input', (event) => {
+    if (!event.isComposing && ['insertFromPaste', 'insertFromDrop'].includes(event.inputType)) {
+        cleanEditorAutomatically();
+    } else {
+        updateCharCount();
+    }
+});
+// Al escribir, esperar a salir del editor para no borrar espacios o saltos en curso.
+editor.addEventListener('blur', cleanEditorAutomatically);
 function updateCharCount() {
     const text = editor.value;
     const chars = text.length;
@@ -1625,7 +1636,9 @@ function updateCharCount() {
 
 // ============ ESTADO VISUAL ============
 function setStatus(msg, type) {
-    statusMsg.textContent = msg;
+    const isIdle = msg === 'Listo';
+    $('playbackStatus').hidden = isIdle;
+    statusMsg.textContent = isIdle ? '' : msg;
     statusDot.className = 'dot' + (type ? ' ' + type : '');
     visualizer.classList.toggle('active', type === 'speaking' || type === 'recording');
 }
@@ -1640,6 +1653,7 @@ function toggleSpeakStop() {
 }
 
 function speak() {
+    cleanEditorAutomatically();
     const text = editor.value.trim();
     if (!text) { showToast('Escribe algo primero', 'warning'); return; }
     stopActivePlayback();
@@ -1955,11 +1969,9 @@ function clearText() {
     showToast('Editor limpiado', 'success');
 }
 
-// Quitar etiquetas HTML y marcas Markdown, dejando texto plano
-function stripFormat() {
-    const antes = editor.value;
-    if (!antes.trim()) { showToast('No hay texto', 'warning'); return; }
-    let t = antes.replace(/\r\n?/g, '\n');
+// Limpieza automática compartida por pegado y escritura.
+function normalizeEditorText(text) {
+    let t = text.replace(/\r\n?/g, '\n');
     // Bloques de código ``` ```
     t = t.replace(/```[\s\S]*?```/g, m => m.replace(/```/g, ''));
     // HTML: saltos y cierres de bloque -> nueva línea, luego quitar etiquetas
@@ -1971,7 +1983,7 @@ function stripFormat() {
     t = t.replace(/&[a-z#0-9]+;/gi, m => ent[m.toLowerCase()] || m);
     // Markdown: imágenes y enlaces -> texto
     t = t.replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1');
-    t = t.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1');
+    t = t.replace(/\[([^\]]+)\]\((?:[^()\n]|\([^()\n]*\))*\)/g, (_, label) => isLinkedReferenceLabel(label) ? '' : label);
     // Encabezados, citas, viñetas, listas numeradas, reglas
     t = t.replace(/^\s{0,3}#{1,6}\s*/gm, '');
     t = t.replace(/^\s{0,3}>\s?/gm, '');
@@ -1984,28 +1996,22 @@ function stripFormat() {
     t = t.replace(/~~(.*?)~~/g, '$1');
     t = t.replace(/`([^`]+)`/g, '$1');
     // Limpiar espacios sobrantes
-    t = t.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
-    editor.value = t;
-    updateCharCount();
-    const quitados = antes.length - t.length;
-    showToast(quitados > 0 ? `Formato quitado (${quitados} caracteres)` : 'No había formato que quitar', 'success');
+    t = t.replace(/[ \t]+\n/g, '\n').replace(/\n{2,}/g, '\n').replace(/[ \t]{2,}/g, ' ').trim();
+    return t;
 }
 
-// Quitar líneas en blanco de más y espacios sobrantes (texto pegado de PDF/Word)
-function compactText() {
-    const antes = editor.value;
-    if (!antes.trim()) { showToast('No hay texto que compactar', 'warning'); return; }
-    const despues = antes
-        .replace(/\r\n?/g, '\n')        // normalizar saltos
-        .replace(/[ \t]+\n/g, '\n')     // quitar espacios al final de línea
-        .replace(/\n{2,}/g, '\n')       // líneas en blanco -> una sola
-        .replace(/[ \t]{2,}/g, ' ')     // espacios múltiples -> uno
-        .replace(/\n{3,}/g, '\n\n')
-        .trim();
-    editor.value = despues;
+function cleanEditorAutomatically() {
+    const before = editor.value;
+    const after = normalizeEditorText(before);
+    if (after !== before) {
+        const start = normalizeEditorText(before.slice(0, editor.selectionStart)).length;
+        const end = normalizeEditorText(before.slice(0, editor.selectionEnd)).length;
+        const scroll = editor.scrollTop;
+        editor.value = after;
+        editor.setSelectionRange(Math.min(start, after.length), Math.min(end, after.length));
+        editor.scrollTop = scroll;
+    }
     updateCharCount();
-    const quitados = antes.length - despues.length;
-    showToast(quitados > 0 ? `Compactado (${quitados} caracteres de más quitados)` : 'Ya estaba compacto', 'success');
 }
 
 // ============ TOAST ============
