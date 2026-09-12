@@ -648,6 +648,16 @@
  .gh-ribbon-items .gh-ribbon-btn { min-height:44px; padding:9px 12px; font-size:12px; font-weight:600; border-color:transparent; box-shadow:none; }
  .gh-ribbon-items .gh-ribbon-btn .rlabel { font-size:12px; font-weight:600; }
 }
+/* Controles de lectura compactos — v24.9 */
+.gh-player { padding: 8px 12px; gap: 6px; }
+.gh-player-btn { min-height: 34px; padding: 7px 12px; font-size: 12px; gap: 5px; }
+.gh-player-btn .pic { font-size: 12px; }
+.gh-player-btn.main { min-width: 78px; }
+.gh-player-btn.generate { min-width: 108px; }
+@media (max-width: 600px) {
+    .gh-player { display: flex; flex-wrap: wrap; }
+    .gh-player-btn { width: auto; min-height: 38px; }
+}
     </style>
 </head>
 <body>
@@ -722,7 +732,6 @@
     <aside class="gh-side">
         <!-- Voz -->
         <div class="gh-panel">
-            <div class="gh-panel-header">🎛️ Voz</div>
             <div class="gh-panel-body">
                 <div class="gh-control">
                     <label>Voz (español)</label>
@@ -818,7 +827,7 @@
 
 <script>
 // ============ ESTADO ============
-const APP_VERSION = '24.8';
+const APP_VERSION = '24.10';
 let voices = [];
 let isSpeaking = false;
 let currentFilename = 'sin_titulo.txt';
@@ -1640,12 +1649,20 @@ function speak() {
 
 // Quita símbolos markdown para que el lector no los pronuncie
 // (asteriscos de **negrita**/*cursiva*, #, guiones de lista, `código`, enlaces, etc.)
+// Referencias enlazadas habituales: [1](url), [2, 5](url), [3–7](url).
+// No inferir referencias a partir de números sueltos o de años de cuatro cifras.
+function isLinkedReferenceLabel(label) {
+    return /^\s*[1-9]\d{0,2}(?:\s*[,;–—-]\s*[1-9]\d{0,2})*\s*$/.test(label);
+}
+
 function cleanForSpeech(text) {
     return text
         .replace(/```[\s\S]*?```/g, ' ')          // bloques de código
         .replace(/`([^`]+)`/g, '$1')               // `código` en línea
         .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')     // imágenes ![alt](url)
-        .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')   // enlaces [texto](url) -> texto
+        // Solo marcadores numéricos enlazados: los años y etiquetas con datos se conservan.
+        .replace(/\[([^\]]+)\]\((?:[^()\n]|\([^()\n]*\))*\)/g, (_, label) =>
+            isLinkedReferenceLabel(label) ? '' : label)
         .replace(/https?:\/\/[^\s]+/g, ' ')        // URLs http(s)://...
         .replace(/www\.[^\s]+/g, ' ')              // enlaces www...
         .replace(/[a-z0-9.\-]+\.(com|net|org|es|io|edu|gov)(\/[^\s]*)?/gi, ' ') // dominios sueltos
