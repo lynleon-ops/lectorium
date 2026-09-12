@@ -821,7 +821,7 @@
 
 <script>
 // ============ ESTADO ============
-const APP_VERSION = '24.13';
+const APP_VERSION = '24.14';
 let voices = [];
 let isSpeaking = false;
 let currentFilename = 'sin_titulo.txt';
@@ -1417,6 +1417,63 @@ async function speakCloud(text) {
     }
 }
 
+// El selector se invoca directamente desde el clic en el formulario, sin prompt ni await previo.
+function requestMp3Destination(suggestedName) {
+    return new Promise((resolve, reject) => {
+        const dialog = document.createElement('dialog');
+        dialog.style.cssText = 'margin:auto;padding:24px;border:1px solid var(--border);border-radius:6px;max-width:440px;width:calc(100% - 32px);color:var(--text);background:var(--bg)';
+        dialog.innerHTML = `
+            <form>
+                <h2 style="font-size:18px;margin-bottom:12px">Guardar MP3</h2>
+                <label for="mp3Filename">Nombre del archivo</label>
+                <input id="mp3Filename" required maxlength="124" autocomplete="off" style="display:block;width:100%;margin:6px 0 12px;padding:9px;font:inherit">
+                <p style="font-size:12px;margin-bottom:16px">Selecciona una carpeta dentro de iCloud Drive para guardar el audio.</p>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button type="submit" class="gh-btn gh-btn-primary">Elegir carpeta y grabar</button>
+                    <button type="button" class="gh-btn" data-cancel>Cancelar</button>
+                </div>
+            </form>`;
+        document.body.appendChild(dialog);
+        const input = dialog.querySelector('input');
+        const submit = dialog.querySelector('[type="submit"]');
+        input.value = suggestedName;
+        let picking = false;
+        const finish = (value, error) => {
+            dialog.close();
+            dialog.remove();
+            if (error) reject(error); else resolve(value);
+        };
+        input.addEventListener('input', () => input.setCustomValidity(''));
+        dialog.querySelector('[data-cancel]').onclick = () => { if (!picking) finish(null); };
+        dialog.addEventListener('cancel', event => { event.preventDefault(); if (!picking) finish(null); });
+        dialog.querySelector('form').addEventListener('submit', event => {
+            event.preventDefault();
+            if (picking) return;
+            const base = input.value.trim().replace(/\.mp3$/i, '').trim();
+            if (!base || base === '.' || base === '..' || /[\\/:*?"<>|\x00-\x1f]/.test(base) || base.length > 120) {
+                input.setCustomValidity('Escribe un nombre válido de hasta 120 caracteres, sin barras ni caracteres especiales de archivo.');
+                input.reportValidity();
+                return;
+            }
+            // Conservar la activación del usuario: llamada síncrona desde submit.
+            let selection;
+            try {
+                selection = window.showDirectoryPicker({ mode: 'readwrite', id: 'lectorium-mp3', ...(mp3DirHandle ? { startIn: mp3DirHandle } : {}) });
+            } catch (error) { finish(null, error); return; }
+            picking = true;
+            submit.disabled = true;
+            selection.then(dir => finish({ name: base + '.mp3', dir }), error => {
+                picking = false;
+                submit.disabled = false;
+                if (error.name !== 'AbortError') finish(null, error);
+            });
+        });
+        dialog.showModal();
+        input.focus();
+        input.select();
+    });
+}
+
 // Pedir nombre y destino antes de generar audio.
 async function generateMp3() {
     cleanEditorAutomatically();
@@ -1428,21 +1485,11 @@ async function generateMp3() {
         showToast('Para guardar en una carpeta de iCloud Drive, abre este HTML en Chrome o Edge de escritorio. No se ha generado audio.', 'warning');
         return;
     }
-    let name;
-    while (true) {
-        const answer = prompt('Nombre del archivo MP3. Después selecciona una carpeta dentro de iCloud Drive.', makeMp3Filename(text));
-        if (answer === null) return;
-        const base = answer.trim().replace(/\.mp3$/i, '').trim();
-        if (!base || base === '.' || base === '..' || /[\\/:*?"<>|\x00-\x1f]/.test(base) || base.length > 120) {
-            alert('Introduce un nombre válido de hasta 120 caracteres, sin barras ni caracteres especiales de archivo.');
-            continue;
-        }
-        name = base + '.mp3';
-        break;
-    }
     $('btnGenerate').disabled = true;
     try {
-        const dir = await window.showDirectoryPicker({ mode: 'readwrite', id: 'lectorium-mp3', ...(mp3DirHandle ? { startIn: mp3DirHandle } : {}) });
+        const destination = await requestMp3Destination(makeMp3Filename(text));
+        if (!destination) return;
+        const { name, dir } = destination;
         if (!confirm('Carpeta seleccionada: ' + dir.name + '\n\n¿Confirmas que esta carpeta está dentro de iCloud Drive? El navegador no permite verificar la ruta completa.')) return;
         let existing = null;
         try { existing = await dir.getFileHandle(name); }
