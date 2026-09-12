@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -623,6 +624,30 @@
             }
             .gh-ribbon-items .gh-ribbon-sep { display: none; }
         }
+
+/* Header y menú compactos según la referencia */
+.gh-header { margin-top:2px; min-height:68px; border-top:3px solid #0866ff; padding:10px 20px; }
+.gh-title { font-size:30px; letter-spacing:.23em; line-height:1; }
+.gh-title span { color:#0866ff; }
+.gh-tagline { margin-top:6px; font-size:8px; letter-spacing:.45em; color:#42516a; line-height:1.2; }
+.gh-ribbon { min-height:45px; padding:5px 10px; gap:0; }
+.gh-ribbon-items { gap:0; }
+.gh-ribbon-btn { min-height:34px; padding:8px 13px; gap:8px; flex-shrink:0; font-size:11px; font-weight:600; letter-spacing:.035em; color:#536178; }
+.gh-ribbon-btn .rlabel { font-size:11px; }
+.gh-ribbon-btn .ricon { width:14px; height:14px; flex-shrink:0; }
+.gh-ribbon-btn.active { background:#e8f0ff; border-color:#c9daff; color:#0866ff; }
+.gh-ribbon-sep { margin:0 2px; }
+.gh-ribbon-btn:focus-visible,.gh-title-wrap:focus-visible,.gh-header-menu:focus-visible { outline:2px solid #0866ff; outline-offset:2px; }
+@media(max-width:600px) {
+ .gh-header { min-height:64px; padding:9px 12px; }
+ .gh-title { font-size:24px; letter-spacing:.2em; }
+ .gh-tagline { font-size:7px; letter-spacing:.3em; margin-top:6px; }
+ .gh-header-menu { width:36px; height:36px; font-size:19px; }
+ .gh-ribbon { padding:5px; box-shadow:none; }
+ .gh-ribbon-items { gap:2px; }
+ .gh-ribbon-items .gh-ribbon-btn { min-height:44px; padding:9px 12px; font-size:12px; font-weight:600; border-color:transparent; box-shadow:none; }
+ .gh-ribbon-items .gh-ribbon-btn .rlabel { font-size:12px; font-weight:600; }
+}
     </style>
 </head>
 <body>
@@ -644,17 +669,17 @@
 <div class="gh-ribbon collapsed" id="ribbon">
     <div class="gh-ribbon-items" id="ribbonItems">
         <button class="gh-ribbon-btn" id="ribbonInicio" onclick="switchView('editor')" title="Ir al editor">
-            <span class="rlabel">Inicio</span>
+            <svg class="ricon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10 12 3l9 7M5 9v12h5v-7h4v7h5V9"/></svg><span class="rlabel">Inicio</span>
         </button>
         <div class="gh-ribbon-sep"></div>
         <button class="gh-ribbon-btn" onclick="stripFormat()" title="Quitar etiquetas HTML y marcas Markdown (dejar texto plano)">
-            <span class="rlabel">Quitar formato</span>
+            <svg class="ricon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h14M11 4 7 20M3 20h8M16 14l6 6m0-6-6 6"/></svg><span class="rlabel">Quitar formato</span>
         </button>
         <button class="gh-ribbon-btn" onclick="compactText()" title="Quitar líneas en blanco y espacios de más">
-            <span class="rlabel">Compactar</span>
+            <svg class="ricon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h16M4 15h16M12 2v4m-3-3 3 3 3-3M12 22v-4m-3 3 3-3 3 3"/></svg><span class="rlabel">Compactar</span>
         </button>
         <button class="gh-ribbon-btn" onclick="clearText()" title="Limpiar el editor">
-            <span class="rlabel">Limpiar</span>
+            <svg class="ricon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 14 9-10 8 8-8 9H9l-5-5v-2ZM9 9l8 8M13 21h9"/></svg><span class="rlabel">Limpiar</span>
         </button>
     </div>
 </div>
